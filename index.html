@@ -172,7 +172,7 @@ document.getElementById('justify').addEventListener('click', async function() {
     const scale = Math.min(imgMaxWidth / iw, imgMaxHeight / ih, 1);
     drawImgWidth = iw * scale;
     drawImgHeight = ih * scale;
-    imgX = margin;
+    imgX = center;
     imgY = pageHeight - margin - drawImgHeight;
   } else {
     // no image: reserve a small area for text-only signature
