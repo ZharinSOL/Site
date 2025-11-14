@@ -153,17 +153,22 @@ document.getElementById('justify').addEventListener('click', async function() {
     y += lineHeight / 2;
   });
 
-  // Decide placement for signature block + image at bottom
+  // ---------- Positioning: change these to move signature/image ----------
+  // sigOffsetX moves both signature text and image horizontally (positive = right)
+  // sigOffsetUp moves signature area upward (positive = up)
+  const sigOffsetX = 30;   // example: move 30pt right
+  const sigOffsetUp = 0;   // example: move 0pt up (increase to move up)
+
+  // image size limits
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 50;
   const imgMaxWidth = pageWidth - margin * 2;
-  const imgMaxHeight = 100; // adjust if you want taller/shorter image
+  const imgMaxHeight = 100; // change to make image taller/shorter
 
-  let drawImgWidth = 0, drawImgHeight = 0, imgX = margin, imgY = pageHeight - margin - imgMaxHeight;
+  let drawImgWidth = 0, drawImgHeight = 0, imgX = margin + sigOffsetX, imgY = pageHeight - margin - imgMaxHeight - sigOffsetUp;
 
   if (imgData) {
-    // create temporary Image to get dimensions
     const tmp = new Image();
     tmp.src = imgData;
     await new Promise(r => tmp.onload = r);
@@ -172,27 +177,29 @@ document.getElementById('justify').addEventListener('click', async function() {
     const scale = Math.min(imgMaxWidth / iw, imgMaxHeight / ih, 1);
     drawImgWidth = iw * scale;
     drawImgHeight = ih * scale;
-    imgX = margin;
-    imgY = pageHeight - margin - drawImgHeight;
+    // set final image coordinates (imgX already has horizontal offset)
+    imgY = pageHeight - margin - drawImgHeight - sigOffsetUp;
   } else {
-    // no image: reserve a small area for text-only signature
-    imgY = pageHeight - margin - 50;
+    imgY = pageHeight - margin - 50 - sigOffsetUp;
   }
 
-  // If current text y would overlap signature area, add a new page
+  // Ensure text doesn't overlap signature area; move to new page if needed
   if (y + 40 > imgY) {
     doc.addPage();
     y = top;
   }
 
-  // Signature texts (placed above the image or above reserved area)
+  // signature text position (use sigOffsetX to move horizontally)
+  const sigLeft = left + sigOffsetX;
+  // place text just above image (adjust spacing as needed)
   const sigTextY = Math.min(y + 10, imgY - 50);
-  doc.text('Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA', left, sigTextY);
-  doc.text('Data: 2025-10-05 10:04:56', left, sigTextY + 12);
-  doc.text('Especialidade: Medicina Geral e Familiar', left, sigTextY + 24);
-  doc.text('Ordem: M-48611', left, sigTextY + 36);
 
-  // Add image if available
+  doc.text('Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA', sigLeft, sigTextY);
+  doc.text('Data: 2025-10-05 10:04:56', sigLeft, sigTextY + 12);
+  doc.text('Especialidade: Medicina Geral e Familiar', sigLeft, sigTextY + 24);
+  doc.text('Ordem: M-48611', sigLeft, sigTextY + 36);
+
+  // draw image if available
   if (imgData) {
     doc.addImage(imgData, 'JPEG', imgX, imgY, drawImgWidth, drawImgHeight);
   }
