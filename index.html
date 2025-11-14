@@ -32,7 +32,7 @@
 
   <div id="output" aria-live="polite"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const { jsPDF } = window.jspdf;
 
@@ -66,89 +66,10 @@ document.getElementById('justify').addEventListener('click', function() {
 
   // Create PDF
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
   const left = 50;
   const top = 70;
   const lineHeight = 16;
-  const maxWidth = pageW - left * 2;
-
-  // Wrap helper (same as before)
-  function wrapParagraph(par) {
-    const words = par.split(/\s+/);
-    const lines = [];
-    let cur = '';
-    for (let w of words) {
-      const trial = cur ? cur + ' ' + w : w;
-      if (doc.getTextWidth(trial) > maxWidth) {
-        if (cur) lines.push(cur);
-        cur = w;
-      } else {
-        cur = trial;
-      }
-    }
-    if (cur) lines.push(cur);
-    return lines;
-  }
-
-  // Write main text
-  doc.setFont('Times', 'Normal');
-  doc.setFontSize(12);
-  let y = top;
-  text.split('\n').forEach(par => {
-    const lines = wrapParagraph(par);
-    if (lines.length === 0) { y += lineHeight; return; }
-    lines.forEach(line => {
-      if (y > pageH - 120) { // leave space at bottom for signature block
-        doc.addPage();
-        y = top;
-      }
-      doc.text(line, left, y);
-      y += lineHeight;
-    });
-    y += lineHeight / 2;
-  });
-
-  // Compute signed block values
-  // Date: end date +1 day at 09:37:42
-  function formatDateForSignedBlock(inputDate) {
-    if (!inputDate) return '$var2+1day 09:37:42';
-    const d = new Date(inputDate + 'T00:00:00');
-    if (isNaN(d)) return '$var2+1day 09:37:42';
-    d.setDate(d.getDate() + 1);
-    const pad = n => String(n).padStart(2,'0');
-    const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    const datePart = pad(d.getDate()) + ' de ' + months[d.getMonth()] + ' de ' + d.getFullYear();
-    return `${datePart} 09:37:42`;
-  }
-
-  const signedLines = [
-    'Assinado digitalmente por: IGOR',
-    'ANDRÉGRILO SOTTOMAIORFARIA',
-    'Data: ' + formatDateForSignedBlock(end),
-    'Especialidade: Medicina Geral e Familiar Ordem: M-48611'
-  ];
-
-  // Draw signed block centered horizontally, starting roughly below center
-  const blockTop = Math.max(y + 40, pageH / 2 + 20);
-  doc.setFontSize(11);
-  doc.setFont('Times', 'Normal');
-
-  let blockY = blockTop;
-  signedLines.forEach(line => {
-    const lineWidth = doc.getTextWidth(line);
-    const x = (pageW - lineWidth) / 2;
-    if (blockY > pageH - 40) {
-      doc.addPage();
-      blockY = top;
-    }
-    doc.text(line, x, blockY);
-    blockY += lineHeight;
-  });
-
-  const fileName = (name || 'justificacao').trim().replace(/\s+/g, '_') + '.pdf';
-  doc.save(fileName);
-});
+  const maxWidth = doc.internal.pageSize.getWidth() - left * 2;
 
   // Preserve explicit newlines and wrap lines
   function wrapParagraph(par) {
