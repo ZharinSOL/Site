@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerador de Justificação</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;padding:20px;max-width:800px;margin:auto}
+    label{display:block;margin-top:12px;font-weight:600}
+    input{width:100%;padding:8px;margin-top:6px;box-sizing:border-box}
+    button{margin-top:14px;padding:10px 16px;font-size:16px}
+    #output{white-space:pre-wrap;border:1px solid #ddd;padding:12px;margin-top:18px;background:#fafafa}
+  </style>
+</head>
+<body>
+
+  <h1>Gerador de Justificação</h1>
+
+  <label for="name">Nome (varN)</label>
+  <input id="name" type="text" placeholder="Ex.: João Silva">
+
+  <label for="nif">NIF</label>
+  <input id="nif" type="text" placeholder="Ex.: 123456789">
+
+  <label for="start">Data início (var1)</label>
+  <input id="start" type="date">
+
+  <label for="end">Data fim (var2)</label>
+  <input id="end" type="date">
+
+  <button id="justify">Justificar</button>
+
+  <div id="output" aria-live="polite"></div>
+
+<script>
+function formatDateForText(inputDate) {
+  if (!inputDate) return '';
+  // inputDate is "YYYY-MM-DD"
+  const d = new Date(inputDate + 'T00:00:00');
+  if (isNaN(d)) return inputDate;
+  // Portuguese long date: e.g., "14 de novembro de 2025"
+  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  return d.getDate() + ' de ' + months[d.getMonth()] + ' de ' + d.getFullYear();
+}
+
+document.getElementById('justify').addEventListener('click', function() {
+  const name = (document.getElementById('name').value || '').trim();
+  const nif = (document.getElementById('nif').value || '').trim();
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('end').value;
+
+  // Reasonable defaults per rules: if empty, use placeholders
+  const nameTxt = name || '$varN';
+  const nifTxt = nif || '$NIF';
+  const startTxt = start ? formatDateForText(start) : '$var1';
+  const endTxt = end ? formatDateForText(end) : '$var2';
+
+  const text = `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, de Dinamarca, NIF n° ${nifTxt} se\nencontrou doente e impedido de exercer a sua atividade profissional desde o dia ${startTxt} ao dia\n${endTxt}.`;
+
+  document.getElementById('output').textContent = text;
+});
+</script>
+
+</body>
+</html>
