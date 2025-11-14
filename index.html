@@ -108,12 +108,12 @@ document.getElementById('justify').addEventListener('click', function() {
   });
 
   // Signature placeholder
-  if (y + 50 < doc.internal.pageSize.getHeight()) {
-    doc.text('Assinado digitalmente por: ', left, y + 10);
-    doc.text('IGOR ANDRÉ GRILO SOTTOMAIOR FARIA' left, y + 20);
-    doc.text('Data: 2025-10-05 10:04:56', left, y + 30);
-    doc.text('Especialidade: Medicina Geral e Familiar' , left, y + 40);
-    doc.text('Ordem: M-48611', left, y + 50);
+  if (y + 40 < doc.internal.pageSize.getHeight()) {
+    doc.text('Assinado digitalmente por: ', left, y + 0);
+    doc.text('IGOR ANDRÉ GRILO SOTTOMAIOR FARIA' left, y + 10);
+    doc.text('Data: 2025-10-05 10:04:56', left, y + 20);
+    doc.text('Especialidade: Medicina Geral e Familiar' , left, y + 30);
+    doc.text('Ordem: M-48611', left, y + 40);
   }
 
   const fileName = (name || 'justificacao').trim().replace(/\s+/g, '_') + '.pdf';
