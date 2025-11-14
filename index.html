@@ -152,51 +152,48 @@ document.getElementById('justify').addEventListener('click', async function() {
     y += lineHeight / 2;
   });
 
-  // ---------- Independent positioning for signature text and image ----------
-  // All values in points (pt). Positive X moves right; positive Y moves down.
-
+  // ---------- Center image on page (both axes) ----------
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  // Signature text independent coords:
-  // Example: center horizontally and set Y near bottom
-  const sigTextX = pageWidth / 2 - 200; // change to desired X; you can compute center by measuring text width
-  const sigTextYPos = pageHeight - 140; // change to desired Y
+  // Desired image display size (adjust as needed)
+  const desiredWidth = 180;  // pt
+  const desiredHeight = 100; // pt
 
-  // Image independent coords and size limits:
-  const imgXpos = pageWidth / 2 + 10;   // image X (change as needed)
-  const imgYpos = pageHeight - 150;     // image Y (change as needed)
-  const imgDrawMaxWidth = 180;          // max image width in pt
-  const imgDrawMaxHeight = 100;         // max image height in pt
-
-  // Compute image draw size if image available
-  let drawW = imgDrawMaxWidth, drawH = imgDrawMaxHeight;
+  // If image available, compute scaled drawW/drawH to respect desired size
+  let drawW = desiredWidth, drawH = desiredHeight;
   if (imgData) {
     const tmp = new Image();
     tmp.src = imgData;
     await new Promise(r => tmp.onload = r);
     const iw = tmp.naturalWidth, ih = tmp.naturalHeight;
-    const scale = Math.min(imgDrawMaxWidth / iw, imgDrawMaxHeight / ih, 1);
+    const scale = Math.min(desiredWidth / iw, desiredHeight / ih, 1);
     drawW = iw * scale;
     drawH = ih * scale;
   }
 
-  // Ensure signature text or image won't overlap page bottom; if so, add new page
-  if (sigTextYPos + 40 > pageHeight - 20 || (imgData && imgYpos + drawH > pageHeight - 20)) {
+  // Center coordinates (so image center == page center)
+  const imgXpos = pageWidth / 2 - drawW / 2;    // e.g., ≈ 207.64 for 180pt width
+  const imgYpos = pageHeight / 2 - drawH / 2;   // e.g., ≈ 370.945 for 100pt height
+
+  // If the text y position would overlap the image, make a new page
+  if (y + 20 > imgYpos) {
     doc.addPage();
     y = top;
   }
 
-  // Draw signature text at independent coords
+  // Signature text independent from image: place below image (example)
+  const sigTextX = pageWidth / 2 - 200; // adjust horizontal position of signature text
+  const sigTextYPos = imgYpos + drawH + 12; // place text just below the image
+
+  // Draw image and signature text
+  if (imgData) {
+    doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
+  }
   doc.text('Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA', sigTextX, sigTextYPos);
   doc.text('Data: 2025-10-05 10:04:56', sigTextX, sigTextYPos + 12);
   doc.text('Especialidade: Medicina Geral e Familiar', sigTextX, sigTextYPos + 24);
   doc.text('Ordem: M-48611', sigTextX, sigTextYPos + 36);
-
-  // Draw image at independent coords
-  if (imgData) {
-    doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
-  }
 
   const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
   doc.save(fileName);
