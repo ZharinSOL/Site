@@ -7,9 +7,11 @@
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;padding:20px;max-width:800px;margin:auto}
     label{display:block;margin-top:12px;font-weight:600}
-    input{width:100%;padding:8px;margin-top:6px;box-sizing:border-box}
+    input, select{width:100%;padding:8px;margin-top:6px;box-sizing:border-box}
     button{margin-top:14px;padding:10px 16px;font-size:16px}
     #output{white-space:pre-wrap;border:1px solid #ddd;padding:12px;margin-top:18px;background:#fafafa}
+    .row{display:flex;gap:10px}
+    .row > div{flex:1}
   </style>
 </head>
 <body>
@@ -27,6 +29,28 @@
 
   <label for="end">Data fim (var2)</label>
   <input id="end" type="date">
+
+  <div class="row">
+    <div>
+      <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
+      <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
+    </div>
+    <div>
+      <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
+      <input id="imgY" type="number" min="0" max="100" value="50" step="0.1">
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="imgW">Image width (%) of page width (0-100)</label>
+      <input id="imgW" type="number" min="0" max="100" value="30" step="0.1">
+    </div>
+    <div>
+      <label for="imgH">Image height (%) of page height (0-100)</label>
+      <input id="imgH" type="number" min="0" max="100" value="12" step="0.1">
+    </div>
+  </div>
 
   <button id="justify">Justificar (Gerar PDF)</button>
 
@@ -96,18 +120,38 @@ function imgElementToDataURL(imgEl) {
   });
 }
 
+// Map normalized coordinates to PDF points
+// normX: 0..100 (0=left,50=center,100=right)
+// normY: 0..100 (0=bottom,50=center,100=top)
+// widthPercent/heightPercent: percent of page width/height for image size
+function normalizedToPdfCoords(normX, normY, widthPct, heightPct, pageW, pageH, drawW, drawH) {
+  // compute image center in points
+  const centerX_pt = (normX / 100) * pageW;
+  // Y: normalized 0 bottom -> convert to points with origin at top for jsPDF
+  const centerY_pt_from_bottom = (normY / 100) * pageH;
+  const centerY_pt = pageH - centerY_pt_from_bottom; // jsPDF origin is top-left
+
+  // compute top-left (x,y) for drawing image given its width/height
+  const x = centerX_pt - drawW / 2;
+  const y = centerY_pt - drawH / 2;
+  return { x, y };
+}
+
 document.getElementById('justify').addEventListener('click', async function() {
   const name = (document.getElementById('name').value || '').trim();
   const nif = (document.getElementById('nif').value || '').trim();
   const start = document.getElementById('start').value;
   const end = document.getElementById('end').value;
 
-  const text = buildText(name, nif, start, end);
+  const imgNormX = parseFloat(document.getElementById('imgX').value); // 0..100
+  const imgNormY = parseFloat(document.getElementById('imgY').value); // 0..100
+  const imgWidthPct = parseFloat(document.getElementById('imgW').value); // % of page width
+  const imgHeightPct = parseFloat(document.getElementById('imgH').value); // % of page height
 
-  // Preview on page
+  const text = buildText(name, nif, start, end);
   document.getElementById('output').textContent = text;
 
-  // Prepare image data URL
+  // load image dataURL
   const imgEl = document.getElementById('sigImg');
   let imgData = null;
   try {
@@ -126,23 +170,25 @@ document.getElementById('justify').addEventListener('click', async function() {
     }
   }
 
-  // Create PDF
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const left = 50;
   const top = 70;
   const lineHeight = 16;
-  const maxWidth = doc.internal.pageSize.getWidth() - left * 2;
+  const maxWidth = pageW - left * 2;
 
   doc.setFont('Times', 'Normal');
   doc.setFontSize(12);
   let y = top;
 
+  // render text with wrapping
   const paragraphs = text.split('\n');
   paragraphs.forEach(par => {
     const lines = wrapParagraph(doc, par, maxWidth);
     if (lines.length === 0) { y += lineHeight; return; }
     lines.forEach(line => {
-      if (y > doc.internal.pageSize.getHeight() - 120) {
+      if (y > pageH - 120) {
         doc.addPage();
         y = top;
       }
@@ -152,48 +198,70 @@ document.getElementById('justify').addEventListener('click', async function() {
     y += lineHeight / 2;
   });
 
-  // ---------- Center image on page (both axes) ----------
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  // compute draw width/height from percentages requested
+  const desiredDrawW = (imgWidthPct / 100) * pageW;
+  const desiredDrawH = (imgHeightPct / 100) * pageH;
 
-  // Desired image display size (adjust as needed)
-  const desiredWidth = 180;  // pt
-  const desiredHeight = 100; // pt
+  let drawW = desiredDrawW;
+  let drawH = desiredDrawH;
 
-  // If image available, compute scaled drawW/drawH to respect desired size
-  let drawW = desiredWidth, drawH = desiredHeight;
   if (imgData) {
     const tmp = new Image();
     tmp.src = imgData;
     await new Promise(r => tmp.onload = r);
     const iw = tmp.naturalWidth, ih = tmp.naturalHeight;
-    const scale = Math.min(desiredWidth / iw, desiredHeight / ih, 1);
+    // scale to fit desired box while preserving aspect ratio
+    const scale = Math.min(desiredDrawW / iw, desiredDrawH / ih, 1);
     drawW = iw * scale;
     drawH = ih * scale;
   }
 
-  // Center coordinates (so image center == page center)
-  const imgXpos = pageWidth / 2 - drawW / 2;    // e.g., ≈ 207.64 for 180pt width
-  const imgYpos = pageHeight / 2 - drawH / 2;   // e.g., ≈ 370.945 for 100pt height
+  // map normalized center -> top-left pdf coords
+  const pos = normalizedToPdfCoords(imgNormX, imgNormY, imgWidthPct, imgHeightPct, pageW, pageH, drawW, drawH);
+  const imgXpos = pos.x;
+  const imgYpos = pos.y;
 
-  // If the text y position would overlap the image, make a new page
-  if (y + 20 > imgYpos) {
+  // if text would overlap image, put image on new page
+  if (y + 20 > imgYpos && imgData) {
     doc.addPage();
     y = top;
   }
 
-  // Signature text independent from image: place below image (example)
-  const sigTextX = pageWidth / 2 - 200; // adjust horizontal position of signature text
-  const sigTextYPos = imgYpos + drawH + 12; // place text just below the image
-
-  // Draw image and signature text
+  // draw image and signature text (signature text placed below image by default)
   if (imgData) {
     doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
   }
-  doc.text('Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA', sigTextX, sigTextYPos);
-  doc.text('Data: 2025-10-05 10:04:56', sigTextX, sigTextYPos + 12);
-  doc.text('Especialidade: Medicina Geral e Familiar', sigTextX, sigTextYPos + 24);
-  doc.text('Ordem: M-48611', sigTextX, sigTextYPos + 36);
+
+  // signature text: choose normalized coordinates for its center easily if you want;
+  // here we place it slightly below the image center (adjust as needed)
+  const sigTextCenterNormX = imgNormX; // same horizontal normalized center as image
+  const sigTextCenterNormY = imgNormY - 10; // 10 units lower in normalized Y (toward bottom) — adjust if needed
+
+  // convert signature text normalized center to top-left coords for placing first line:
+  const sigTextCenterFromBottom = (sigTextCenterNormY / 100) * pageH;
+  const sigTextCenterY_pt = pageH - sigTextCenterFromBottom;
+  const sigTextX_pt = (sigTextCenterNormX / 100) * pageW;
+  const sigTextY_pt = sigTextCenterY_pt; // center point; we'll offset lines upward a bit
+
+  // render signature lines centered at sigTextX_pt
+  const sigLines = [
+    'Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA',
+    'Data: 2025-10-05 10:04:56',
+    'Especialidade: Medicina Geral e Familiar',
+    'Ordem: M-48611'
+  ];
+  // compute total block height
+  const sigLineHeight = 12 + 4; // font size 12 + small spacing
+  const blockH = sigLines.length * sigLineHeight;
+  // top-left y for block so block is centered at sigTextY_pt
+  let blockTopY = sigTextY_pt - blockH / 2;
+  // left so text is centered around sigTextX_pt
+  sigLines.forEach((line, i) => {
+    const tw = doc.getTextWidth(line);
+    const drawX = sigTextX_pt - tw / 2;
+    const drawY = blockTopY + i * sigLineHeight + 12; // baseline offset
+    doc.text(line, drawX, drawY);
+  });
 
   const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
   doc.save(fileName);
