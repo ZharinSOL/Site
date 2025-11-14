@@ -32,6 +32,9 @@
 
   <div id="output" aria-live="polite"></div>
 
+  <!-- hidden image (same folder) -->
+  <img id="sigImg" src="assinadoDigitalmente.jpg" style="display:none" crossorigin="anonymous" />
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const { jsPDF } = window.jspdf;
@@ -53,7 +56,47 @@ function buildText(name, nif, start, end) {
   return `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, de Dinamarca, NIF n° ${nifTxt} se\nencontrou doente e impedido de exercer a sua atividade profissional desde o dia ${startTxt} ao dia\n${endTxt}.`;
 }
 
-document.getElementById('justify').addEventListener('click', function() {
+function wrapParagraph(doc, par, maxWidth) {
+  const words = par.split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (let w of words) {
+    const trial = cur ? cur + ' ' + w : w;
+    if (doc.getTextWidth(trial) > maxWidth) {
+      if (cur) lines.push(cur);
+      cur = w;
+    } else {
+      cur = trial;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function imgElementToDataURL(imgEl) {
+  return new Promise((resolve, reject) => {
+    const img = imgEl;
+    function convert() {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        resolve(c.toDataURL('image/jpeg'));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    if (img.complete && img.naturalWidth !== 0) {
+      convert();
+    } else {
+      img.onload = convert;
+      img.onerror = () => reject(new Error('Image load error'));
+    }
+  });
+}
+
+document.getElementById('justify').addEventListener('click', async function() {
   const name = (document.getElementById('name').value || '').trim();
   const nif = (document.getElementById('nif').value || '').trim();
   const start = document.getElementById('start').value;
@@ -64,6 +107,26 @@ document.getElementById('justify').addEventListener('click', function() {
   // Preview on page
   document.getElementById('output').textContent = text;
 
+  // Prepare image data URL
+  const imgEl = document.getElementById('sigImg');
+  let imgData = null;
+  try {
+    imgData = await imgElementToDataURL(imgEl);
+  } catch (e) {
+    // fallback: fetch and convert
+    try {
+      const resp = await fetch(imgEl.src);
+      const blob = await resp.blob();
+      imgData = await new Promise((res) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.readAsDataURL(blob);
+      });
+    } catch (e2) {
+      imgData = null;
+    }
+  }
+
   // Create PDF
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const left = 50;
@@ -71,33 +134,16 @@ document.getElementById('justify').addEventListener('click', function() {
   const lineHeight = 16;
   const maxWidth = doc.internal.pageSize.getWidth() - left * 2;
 
-  // Preserve explicit newlines and wrap lines
-  function wrapParagraph(par) {
-    const words = par.split(/\s+/);
-    const lines = [];
-    let cur = '';
-    for (let w of words) {
-      const trial = cur ? cur + ' ' + w : w;
-      if (doc.getTextWidth(trial) > maxWidth) {
-        if (cur) lines.push(cur);
-        cur = w;
-      } else {
-        cur = trial;
-      }
-    }
-    if (cur) lines.push(cur);
-    return lines;
-  }
-
-  const paragraphs = text.split('\n');
   doc.setFont('Times', 'Normal');
   doc.setFontSize(12);
   let y = top;
+
+  const paragraphs = text.split('\n');
   paragraphs.forEach(par => {
-    const lines = wrapParagraph(par);
+    const lines = wrapParagraph(doc, par, maxWidth);
     if (lines.length === 0) { y += lineHeight; return; }
     lines.forEach(line => {
-      if (y > doc.internal.pageSize.getHeight() - 60) {
+      if (y > doc.internal.pageSize.getHeight() - 120) {
         doc.addPage();
         y = top;
       }
@@ -107,15 +153,51 @@ document.getElementById('justify').addEventListener('click', function() {
     y += lineHeight / 2;
   });
 
-  // Signature placeholder
-  if (y + 40 < doc.internal.pageSize.getHeight()) {
-    doc.text('Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA', left, y + 10);
-    doc.text('Data: 2025-10-05 10:04:56', left, y + 20);
-    doc.text('Especialidade: Medicina Geral e Familiar' , left, y + 30);
-    doc.text('Ordem: M-48611', left, y + 40);
+  // Decide placement for signature block + image at bottom
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 50;
+  const imgMaxWidth = pageWidth - margin * 2;
+  const imgMaxHeight = 100; // adjust if you want taller/shorter image
+
+  let drawImgWidth = 0, drawImgHeight = 0, imgX = margin, imgY = pageHeight - margin - imgMaxHeight;
+
+  if (imgData) {
+    // create temporary Image to get dimensions
+    const tmp = new Image();
+    tmp.src = imgData;
+    await new Promise(r => tmp.onload = r);
+    const iw = tmp.naturalWidth;
+    const ih = tmp.naturalHeight;
+    const scale = Math.min(imgMaxWidth / iw, imgMaxHeight / ih, 1);
+    drawImgWidth = iw * scale;
+    drawImgHeight = ih * scale;
+    imgX = margin;
+    imgY = pageHeight - margin - drawImgHeight;
+  } else {
+    // no image: reserve a small area for text-only signature
+    imgY = pageHeight - margin - 50;
   }
 
-  const fileName = (name || 'justificacao').trim().replace(/\s+/g, '_') + '.pdf';
+  // If current text y would overlap signature area, add a new page
+  if (y + 40 > imgY) {
+    doc.addPage();
+    y = top;
+  }
+
+  // Signature texts (placed above the image or above reserved area)
+  const sigTextY = Math.min(y + 10, imgY - 50);
+  doc.text('Assinado digitalmente por: IGOR ANDRÉ GRILO SOTTOMAIOR FARIA', left, sigTextY);
+  doc.text('Data: 2025-10-05 10:04:56', left, sigTextY + 12);
+  doc.text('Especialidade: Medicina Geral e Familiar', left, sigTextY + 24);
+  doc.text('Ordem: M-48611', left, sigTextY + 36);
+
+  // Add image if available
+  if (imgData) {
+    doc.addImage(imgData, 'JPEG', imgX, imgY, drawImgWidth, drawImgHeight);
+  }
+
+  const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
   doc.save(fileName);
 });
 </script>
