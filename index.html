@@ -383,8 +383,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const imgXpos = imgPos.x;
   const imgYpos = imgPos.y;
 
-  // FIXED: Check if there's enough space for image AND signature on current page
-  // If not, add a new page before drawing anything
+  
   const signatureHeight = 70; // Approximate height needed for signature block
   if (y + signatureHeight > pageH - 50 && imgData) {
     doc.addPage();
