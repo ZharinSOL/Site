@@ -14,6 +14,8 @@
     .row > div{flex:1}
     .section{margin-top:30px;padding-top:20px;border-top:1px solid #eee}
     .timestamp{font-size:12px;color:#666;margin-top:8px;font-style:italic;text-align:center}
+    .date-option{display:none}
+    .date-option.active{display:block}
   </style>
 </head>
 <body>
@@ -26,30 +28,51 @@
   <label for="nif">NIF / Passaporte</label>
   <input id="nif" type="text" placeholder="Ex.: 123456789">
 
-  <label for="date">Data da consulta</label>
-  <input id="date" type="date">
+  <label for="dateType">Tipo de Data</label>
+  <select id="dateType">
+    <option value="single">Data única</option>
+    <option value="range">Período (data início e fim)</option>
+  </select>
+
+  <div id="singleDateOption" class="date-option active">
+    <label for="date">Data da consulta</label>
+    <input id="date" type="date">
+  </div>
+
+  <div id="rangeDateOption" class="date-option">
+    <div class="row">
+      <div>
+        <label for="startDate">Data início</label>
+        <input id="startDate" type="date">
+      </div>
+      <div>
+        <label for="endDate">Data fim</label>
+        <input id="endDate" type="date">
+      </div>
+    </div>
+  </div>
 
   <div class="section">
     <h3>Posição da Imagem</h3>
     <div class="row">
       <div>
         <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
-        <input id="imgX" type="number" min="0" max="100" value="54" step="0.1">
+        <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
       </div>
       <div>
         <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
-        <input id="imgY" type="number" min="0" max="100" value="57" step="0.1">
+        <input id="imgY" type="number" min="0" max="100" value="55" step="0.1">
       </div>
     </div>
 
     <div class="row">
       <div>
         <label for="imgW">Image width (%) of page width (0-100)</label>
-        <input id="imgW" type="number" min="0" max="100" value="33" step="0.1">
+        <input id="imgW" type="number" min="0" max="100" value="42" step="0.1">
       </div>
       <div>
         <label for="imgH">Image height (%) of page height (0-100)</label>
-        <input id="imgH" type="number" min="0" max="100" value="33" step="0.1">
+        <input id="imgH" type="number" min="0" max="100" value="42" step="0.1">
       </div>
     </div>
   </div>
@@ -59,11 +82,11 @@
     <div class="row">
       <div>
         <label for="textX">Text X (0 left — 50 center — 100 right)</label>
-        <input id="textX" type="number" min="0" max="100" value="37" step="0.1">
+        <input id="textX" type="number" min="0" max="100" value="50" step="0.1">
       </div>
       <div>
         <label for="textY">Text Y (0 bottom — 50 center — 100 top)</label>
-        <input id="textY" type="number" min="0" max="100" value="59.5" step="0.1">
+        <input id="textY" type="number" min="0" max="100" value="40" step="0.1">
       </div>
     </div>
   </div>
@@ -101,6 +124,13 @@ function updateTimestamp() {
 // Update immediately and then every second
 updateTimestamp();
 setInterval(updateTimestamp, 1000);
+
+// Date type toggle
+document.getElementById('dateType').addEventListener('change', function() {
+  const dateType = this.value;
+  document.getElementById('singleDateOption').classList.toggle('active', dateType === 'single');
+  document.getElementById('rangeDateOption').classList.toggle('active', dateType === 'range');
+});
 
 const { jsPDF } = window.jspdf;
 
@@ -148,16 +178,28 @@ function formatSignatureDate(inputDate) {
   return `${year}-${month}-${day} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function buildText(name, nif, date) {
+function buildText(name, nif, dateType, singleDate, startDate, endDate) {
   const nameTxt = name || '$varN';
   const nifTxt = nif || '$NIF';
-  const dateTxt = date ? formatDateForText(date) : '$data';
-  const nextDayTxt = date ? getNextDay(date) : '$data+1';
+  
+  let dateText = '';
+  let signatureBaseDate = singleDate;
+
+  if (dateType === 'single') {
+    const dateTxt = singleDate ? formatDateForText(singleDate) : '$data';
+    dateText = `no dia ${dateTxt}`;
+    signatureBaseDate = singleDate;
+  } else {
+    const startTxt = startDate ? formatDateForText(startDate) : '$data_inicio';
+    const endTxt = endDate ? formatDateForText(endDate) : '$data_fim';
+    dateText = `desde o dia ${startTxt} ao dia ${endTxt}`;
+    signatureBaseDate = endDate || startDate;
+  }
 
   return {
     title: "Atestado Médico",
-    content: `\n\nIgor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do passaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional no dia ${dateTxt}.\n\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`,
-    signatureDate: date ? formatSignatureDate(date) : '2025-10-20 18:51:42'
+    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do passaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional ${dateText}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`,
+    signatureDate: signatureBaseDate ? formatSignatureDate(signatureBaseDate) : '2025-10-20 18:51:42'
   };
 }
 
@@ -234,7 +276,10 @@ function normalizedToPdfTextCoords(normX, normY, pageW, pageH) {
 document.getElementById('justify').addEventListener('click', async function() {
   const name = (document.getElementById('name').value || '').trim();
   const nif = (document.getElementById('nif').value || '').trim();
-  const date = document.getElementById('date').value;
+  const dateType = document.getElementById('dateType').value;
+  const singleDate = document.getElementById('date').value;
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
 
   const imgNormX = parseFloat(document.getElementById('imgX').value); // 0..100
   const imgNormY = parseFloat(document.getElementById('imgY').value); // 0..100
@@ -244,7 +289,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormX = parseFloat(document.getElementById('textX').value); // 0..100
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
-  const textData = buildText(name, nif, date);
+  const textData = buildText(name, nif, dateType, singleDate, startDate, endDate);
   document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDate;
 
   // load image dataURL
@@ -271,12 +316,12 @@ document.getElementById('justify').addEventListener('click', async function() {
   const pageH = doc.internal.pageSize.getHeight();
   const left = 50;
   const top = 70;
-  const lineHeight = 16;
+  const lineHeight = 12;
   const maxWidth = pageW - left * 2;
 
   // Draw "Atestado Médico" title at the top
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
+  doc.setFontSize(24); // Increased font size
   const titleText = "Atestado Médico";
   const titleWidth = doc.getTextWidth(titleText);
   const titleX = (pageW - titleWidth) / 2;
@@ -284,7 +329,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   
   // Draw content below the title
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   let y = top + 40;
 
   // render text with wrapping
@@ -346,8 +391,8 @@ document.getElementById('justify').addEventListener('click', async function() {
     'Ordem: M-48611'
   ];
   
-  const sigLineHeight = 10;
-  const sigFontSize = 8.5;
+  const sigLineHeight = 12;
+  const sigFontSize = 10;
   
   doc.setFontSize(sigFontSize);
   doc.setFont('helvetica', 'normal');
