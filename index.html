@@ -95,7 +95,7 @@ function buildText(name, nif, date) {
 
   return {
     title: "Atestado Médico",
-    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do\npassaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional no dia\n${dateTxt}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`
+    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do passaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional no dia ${dateTxt}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`
   };
 }
 
@@ -209,19 +209,19 @@ document.getElementById('justify').addEventListener('click', async function() {
   const pageH = doc.internal.pageSize.getHeight();
   const left = 50;
   const top = 70;
-  const lineHeight = 12;
+  const lineHeight = 16;
   const maxWidth = pageW - left * 2;
 
-  // CHANGED: Use Helvetica (sans-serif) instead of Times
-  // Draw title "Atestado Médico" centered
-  doc.setFont('helvetica', 'bold'); // Changed to helvetica bold
+  // ADDED: Draw "Atestado Médico" title at the top
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  const titleWidth = doc.getTextWidth(textData.title);
-  const titleX = (pageW - titleWidth) / 2;
-  doc.text(textData.title, titleX, top);
+  const titleText = "Atestado Médico";
+  const titleWidth = doc.getTextWidth(titleText);
+  const titleX = (pageW - titleWidth) / 2; // Center the title
+  doc.text(titleText, titleX, top);
   
-  // Draw content
-  doc.setFont('helvetica', 'normal'); // Changed to helvetica normal
+  // Draw content below the title
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(12);
   let y = top + 40; // Space after title
 
@@ -285,10 +285,10 @@ document.getElementById('justify').addEventListener('click', async function() {
   ];
   
   const sigLineHeight = 12;
-  const sigFontSize = 8.5;
+  const sigFontSize = 10;
   
   doc.setFontSize(sigFontSize);
-  doc.setFont('helvetica', 'normal'); // Changed to helvetica for signature too
+  doc.setFont('helvetica', 'normal');
   
   // Calculate the maximum width of signature lines
   let maxSigLineWidth = 0;
