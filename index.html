@@ -88,14 +88,50 @@ function formatDateForText(inputDate) {
   return `${day}/${month}/${year}`;
 }
 
+function getNextDay(inputDate) {
+  if (!inputDate) return '';
+  const d = new Date(inputDate + 'T00:00:00');
+  if (isNaN(d)) return inputDate;
+  
+  // Add one day
+  d.setDate(d.getDate() + 1);
+  
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function formatSignatureDate(inputDate) {
+  if (!inputDate) return '2025-10-20 18:51:42';
+  const d = new Date(inputDate + 'T00:00:00');
+  if (isNaN(d)) return '2025-10-20 18:51:42';
+  
+  // Add one day for the signature date
+  d.setDate(d.getDate() + 1);
+  
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  
+  // Random time between 08:00 and 18:00
+  const hours = Math.floor(Math.random() * 10) + 8; // 8-17
+  const minutes = Math.floor(Math.random() * 60); // 0-59
+  const seconds = Math.floor(Math.random() * 60); // 0-59
+  
+  return `${year}-${month}-${day} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
 function buildText(name, nif, date) {
   const nameTxt = name || '$varN';
   const nifTxt = nif || '$NIF';
   const dateTxt = date ? formatDateForText(date) : '$data';
+  const nextDayTxt = date ? getNextDay(date) : '$data+1';
 
   return {
     title: "Atestado Médico",
-    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do passaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional no dia ${dateTxt}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`
+    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do passaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional no dia ${dateTxt}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`,
+    signatureDate: date ? formatSignatureDate(date) : '2025-10-20 18:51:42'
   };
 }
 
@@ -183,7 +219,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
   const textData = buildText(name, nif, date);
-  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content;
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDate;
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
@@ -212,18 +248,18 @@ document.getElementById('justify').addEventListener('click', async function() {
   const lineHeight = 16;
   const maxWidth = pageW - left * 2;
 
-  // ADDED: Draw "Atestado Médico" title at the top
+  // Draw "Atestado Médico" title at the top
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   const titleText = "Atestado Médico";
   const titleWidth = doc.getTextWidth(titleText);
-  const titleX = (pageW - titleWidth) / 2; // Center the title
+  const titleX = (pageW - titleWidth) / 2;
   doc.text(titleText, titleX, top);
   
   // Draw content below the title
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(12);
-  let y = top + 40; // Space after title
+  let y = top + 40;
 
   // render text with wrapping
   const paragraphs = textData.content.split('\n');
@@ -275,11 +311,11 @@ document.getElementById('justify').addEventListener('click', async function() {
     doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
   }
 
-  // Signature text
+  // Signature text with dynamic date
   const sigLines = [
     'Assinado digitalmente por: IGOR',
     'ANDRÉ GRILO SOTTOMAIOR FARIA',
-    'Data: 2025-10-20 18:51:42',
+    `Data: ${textData.signatureDate}`,
     'Especialidade: Medicina Geral e Familiar',
     'Ordem: M-48611'
   ];
@@ -303,10 +339,8 @@ document.getElementById('justify').addEventListener('click', async function() {
   // For left-aligned text that's centered, we need to adjust the X position
   let textXPos;
   if (textNormX <= 50) {
-    // For left-aligned positioning (0-50), use the calculated X directly
     textXPos = textPos.x;
   } else {
-    // For right of center, adjust for the block width
     textXPos = textPos.x - maxSigLineWidth;
   }
   
@@ -320,6 +354,5 @@ document.getElementById('justify').addEventListener('click', async function() {
   doc.save(fileName);
 });
 </script>
-
 </body>
 </html>
