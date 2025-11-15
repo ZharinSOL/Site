@@ -18,28 +18,32 @@
     .date-option.active{display:block}
     .error-message{color:#d32f2f;font-size:14px;margin-top:8px;display:none}
     .error-field{border-color:#d32f2f !important}
+    .language-toggle{position:absolute;top:20px;left:20px;background:#f5f5f5;border:1px solid #ddd;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:14px}
   </style>
 </head>
 <body>
 
-  <h1>Gerador de Justificação</h1>
+  <!-- Language Toggle -->
+  <div class="language-toggle" id="languageToggle">EN</div>
 
-  <label for="name">Nome (varN)</label>
+  <h1 id="pageTitle">Gerador de Justificação</h1>
+
+  <label for="name" id="nameLabel">Nome (varN)</label>
   <input id="name" type="text" placeholder="Ex.: João Silva">
   <div id="name-error" class="error-message">Por favor, insira o nome</div>
 
-  <label for="nif">NIFº</label>
+  <label for="nif" id="nifLabel">NIFº</label>
   <input id="nif" type="text" placeholder="Ex.: 123456789" maxlength="9">
   <div id="nif-error" class="error-message">Por favor, insira um NIF válido (9 dígitos)</div>
 
-  <label for="dateType">Tipo de Data</label>
+  <label for="dateType" id="dateTypeLabel">Tipo de Data</label>
   <select id="dateType">
     <option value="single">Data única</option>
     <option value="range">Período (data início e fim)</option>
   </select>
 
   <div id="singleDateOption" class="date-option active">
-    <label for="date">Data da consulta</label>
+    <label for="date" id="dateLabel">Data da consulta</label>
     <input id="date" type="date">
     <div id="date-error" class="error-message">Por favor, selecione uma data</div>
   </div>
@@ -47,12 +51,12 @@
   <div id="rangeDateOption" class="date-option">
     <div class="row">
       <div>
-        <label for="startDate">Data início</label>
+        <label for="startDate" id="startDateLabel">Data início</label>
         <input id="startDate" type="date">
         <div id="startDate-error" class="error-message">Por favor, selecione a data de início</div>
       </div>
       <div>
-        <label for="endDate">Data fim</label>
+        <label for="endDate" id="endDateLabel">Data fim</label>
         <input id="endDate" type="date">
         <div id="endDate-error" class="error-message">Por favor, selecione a data de fim</div>
       </div>
@@ -60,39 +64,39 @@
   </div>
 
   <div class="section">
-    <h3>Posição da Imagem (Developer Tools)</h3>
+    <h3 id="imagePositionTitle">Posição da Imagem (Developer Tools)</h3>
     <div class="row">
       <div>
-        <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
+        <label for="imgX" id="imgXLabel">Image X (0 left — 50 center — 100 right)</label>
         <input id="imgX" type="number" min="0" max="100" value="54" step="0.1">
       </div>
       <div>
-        <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
+        <label for="imgY" id="imgYLabel">Image Y (0 bottom — 50 center — 100 top)</label>
         <input id="imgY" type="number" min="0" max="100" value="60" step="0.1">
       </div>
     </div>
 
     <div class="row">
       <div>
-        <label for="imgW">Image width (%) of page width (0-100)</label>
+        <label for="imgW" id="imgWLabel">Image width (%) of page width (0-100)</label>
         <input id="imgW" type="number" min="0" max="100" value="33" step="0.1">
       </div>
       <div>
-        <label for="imgH">Image height (%) of page height (0-100)</label>
+        <label for="imgH" id="imgHLabel">Image height (%) of page height (0-100)</label>
         <input id="imgH" type="number" min="0" max="100" value="33" step="0.1">
       </div>
     </div>
   </div>
 
   <div class="section">
-    <h3>Posição do Texto de Assinatura (Developer Tools)</h3>
+    <h3 id="signaturePositionTitle">Posição do Texto de Assinatura (Developer Tools)</h3>
     <div class="row">
       <div>
-        <label for="textX">Text X (0 left — 50 center — 100 right)</label>
+        <label for="textX" id="textXLabel">Text X (0 left — 50 center — 100 right)</label>
         <input id="textX" type="number" min="0" max="100" value="37" step="0.1">
       </div>
       <div>
-        <label for="textY">Text Y (0 bottom — 50 center — 100 top)</label>
+        <label for="textY" id="textYLabel">Text Y (0 bottom — 50 center — 100 top)</label>
         <input id="textY" type="number" min="0" max="100" value="62.5" step="0.1">
       </div>
     </div>
@@ -104,7 +108,7 @@
 
   <!-- Timestamp -->
   <div id="timestamp" class="timestamp">
-    Last updated: <span id="currentTime"></span>
+    <span id="lastUpdatedText">Last updated:</span> <span id="currentTime"></span>
   </div>
 
   <!-- hidden image (same folder) -->
@@ -112,6 +116,145 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
+// Language support
+const translations = {
+  pt: {
+    pageTitle: "Gerador de Justificação",
+    nameLabel: "Nome (varN)",
+    namePlaceholder: "Ex.: João Silva",
+    nifLabel: "NIFº",
+    nifPlaceholder: "Ex.: 123456789",
+    dateTypeLabel: "Tipo de Data",
+    singleDateOption: "Data única",
+    rangeDateOption: "Período (data início e fim)",
+    dateLabel: "Data da consulta",
+    startDateLabel: "Data início",
+    endDateLabel: "Data fim",
+    imagePositionTitle: "Posição da Imagem (Developer Tools)",
+    imgXLabel: "Image X (0 left — 50 center — 100 right)",
+    imgYLabel: "Image Y (0 bottom — 50 center — 100 top)",
+    imgWLabel: "Image width (%) of page width (0-100)",
+    imgHLabel: "Image height (%) of page height (0-100)",
+    signaturePositionTitle: "Posição do Texto de Assinatura (Developer Tools)",
+    textXLabel: "Text X (0 left — 50 center — 100 right)",
+    textYLabel: "Text Y (0 bottom — 50 center — 100 top)",
+    justifyButton: "Justificar (Gerar PDF)",
+    lastUpdatedText: "Atualizado em:",
+    nameError: "Por favor, insira o nome",
+    nifError: "Por favor, insira um NIF válido (9 dígitos)",
+    dateError: "Por favor, selecione uma data",
+    startDateError: "Por favor, selecione a data de início",
+    endDateError: "Por favor, selecione a data de fim",
+    dateRangeError: "A data de início não pode ser posterior à data de fim",
+    validationError: "Por favor, preencha todos os campos obrigatórios antes de gerar o PDF.",
+    outputTitle: "Atestado Médico",
+    outputContent: "Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que {name}, titular do número de identificação fiscal nº {nif} se encontrou doente e impedido de exercer a sua atividade profissional {dateText}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.",
+    signatureDate: "Data da assinatura:",
+    singleDateText: "no dia {date}",
+    rangeDateText: "desde o dia {startDate} ao dia {endDate}"
+  },
+  en: {
+    pageTitle: "Certificate Generator",
+    nameLabel: "Name (varN)",
+    namePlaceholder: "Ex.: John Smith",
+    nifLabel: "Tax ID",
+    nifPlaceholder: "Ex.: 123456789",
+    dateTypeLabel: "Date Type",
+    singleDateOption: "Single date",
+    rangeDateOption: "Date range (start and end)",
+    dateLabel: "Consultation date",
+    startDateLabel: "Start date",
+    endDateLabel: "End date",
+    imagePositionTitle: "Image Position (Developer Tools)",
+    imgXLabel: "Image X (0 left — 50 center — 100 right)",
+    imgYLabel: "Image Y (0 bottom — 50 center — 100 top)",
+    imgWLabel: "Image width (%) of page width (0-100)",
+    imgHLabel: "Image height (%) of page height (0-100)",
+    signaturePositionTitle: "Signature Text Position (Developer Tools)",
+    textXLabel: "Text X (0 left — 50 center — 100 right)",
+    textYLabel: "Text Y (0 bottom — 50 center — 100 top)",
+    justifyButton: "Generate (Create PDF)",
+    lastUpdatedText: "Last updated:",
+    nameError: "Please enter the name",
+    nifError: "Please enter a valid Tax ID (9 digits)",
+    dateError: "Please select a date",
+    startDateError: "Please select the start date",
+    endDateError: "Please select the end date",
+    dateRangeError: "Start date cannot be after end date",
+    validationError: "Please fill in all required fields before generating the PDF.",
+    outputTitle: "Medical Certificate",
+    outputContent: "Igor André Sottomaior Faria, Physician registered with the Portuguese Medical Association with number 48611, certifies under professional commitment that {name}, holder of tax identification number {nif} was ill and unable to perform their professional activity {dateText}.\n\nAs this is true and I was requested to do so, I issue this certificate which I date and sign.",
+    signatureDate: "Signature date:",
+    singleDateText: "on {date}",
+    rangeDateText: "from {startDate} to {endDate}"
+  }
+};
+
+let currentLanguage = 'pt';
+
+// Function to toggle language
+function toggleLanguage() {
+  currentLanguage = currentLanguage === 'pt' ? 'en' : 'pt';
+  updateLanguage();
+}
+
+// Function to update all text elements with current language
+function updateLanguage() {
+  const t = translations[currentLanguage];
+  
+  // Update toggle button text
+  document.getElementById('languageToggle').textContent = currentLanguage === 'pt' ? 'EN' : 'PT';
+  
+  // Update page title
+  document.getElementById('pageTitle').textContent = t.pageTitle;
+  
+  // Update form labels and placeholders
+  document.getElementById('nameLabel').textContent = t.nameLabel;
+  document.getElementById('name').placeholder = t.namePlaceholder;
+  document.getElementById('nifLabel').textContent = t.nifLabel;
+  document.getElementById('nif').placeholder = t.nifPlaceholder;
+  document.getElementById('dateTypeLabel').textContent = t.dateTypeLabel;
+  
+  // Update date type options
+  document.querySelector('#dateType option[value="single"]').textContent = t.singleDateOption;
+  document.querySelector('#dateType option[value="range"]').textContent = t.rangeDateOption;
+  
+  // Update date labels
+  document.getElementById('dateLabel').textContent = t.dateLabel;
+  document.getElementById('startDateLabel').textContent = t.startDateLabel;
+  document.getElementById('endDateLabel').textContent = t.endDateLabel;
+  
+  // Update section titles
+  document.getElementById('imagePositionTitle').textContent = t.imagePositionTitle;
+  document.getElementById('signaturePositionTitle').textContent = t.signaturePositionTitle;
+  
+  // Update image position labels
+  document.getElementById('imgXLabel').textContent = t.imgXLabel;
+  document.getElementById('imgYLabel').textContent = t.imgYLabel;
+  document.getElementById('imgWLabel').textContent = t.imgWLabel;
+  document.getElementById('imgHLabel').textContent = t.imgHLabel;
+  
+  // Update signature position labels
+  document.getElementById('textXLabel').textContent = t.textXLabel;
+  document.getElementById('textYLabel').textContent = t.textYLabel;
+  
+  // Update button text
+  document.getElementById('justify').textContent = t.justifyButton;
+  
+  // Update timestamp text
+  document.getElementById('lastUpdatedText').textContent = t.lastUpdatedText;
+  
+  // Update error messages
+  document.getElementById('name-error').textContent = t.nameError;
+  document.getElementById('nif-error').textContent = t.nifError;
+  document.getElementById('date-error').textContent = t.dateError;
+  document.getElementById('startDate-error').textContent = t.startDateError;
+  document.getElementById('endDate-error').textContent = t.endDateError;
+}
+
+// Initialize language toggle
+document.getElementById('languageToggle').addEventListener('click', toggleLanguage);
+
 // Timestamp function
 function updateTimestamp() {
   const now = new Date();
@@ -241,7 +384,7 @@ function validateForm() {
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       document.getElementById('startDate').classList.add('error-field');
       document.getElementById('endDate').classList.add('error-field');
-      document.getElementById('startDate-error').textContent = 'A data de início não pode ser posterior à data de fim';
+      document.getElementById('startDate-error').textContent = translations[currentLanguage].dateRangeError;
       document.getElementById('startDate-error').style.display = 'block';
       isValid = false;
     }
@@ -303,20 +446,22 @@ function buildText(name, nif, dateType, singleDate, startDate, endDate) {
   let dateText = '';
   let signatureBaseDate = singleDate;
 
+  const t = translations[currentLanguage];
+  
   if (dateType === 'single') {
     const dateTxt = singleDate ? formatDateForText(singleDate) : '$data';
-    dateText = `no dia ${dateTxt}`;
+    dateText = t.singleDateText.replace('{date}', dateTxt);
     signatureBaseDate = singleDate;
   } else {
     const startTxt = startDate ? formatDateForText(startDate) : '$data_inicio';
     const endTxt = endDate ? formatDateForText(endDate) : '$data_fim';
-    dateText = `desde o dia ${startTxt} ao dia ${endTxt}`;
+    dateText = t.rangeDateText.replace('{startDate}', startTxt).replace('{endDate}', endTxt);
     signatureBaseDate = endDate || startDate;
   }
 
   return {
-    title: "Atestado Médico",
-    content: `\nIgor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, titular do número de identificação fiscal nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional ${dateText}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`,
+    title: t.outputTitle,
+    content: t.outputContent.replace('{name}', nameTxt).replace('{nif}', nifTxt).replace('{dateText}', dateText),
     signatureDate: signatureBaseDate ? formatSignatureDate(signatureBaseDate) : '2025-10-20 18:51:42'
   };
 }
@@ -394,7 +539,7 @@ function normalizedToPdfTextCoords(normX, normY, pageW, pageH) {
 document.getElementById('justify').addEventListener('click', async function() {
   // Validate form before proceeding
   if (!validateForm()) {
-    document.getElementById('output').textContent = "Por favor, preencha todos os campos obrigatórios antes de gerar o PDF.";
+    document.getElementById('output').textContent = translations[currentLanguage].validationError;
     return;
   }
 
@@ -414,7 +559,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
   const textData = buildText(name, nif, dateType, singleDate, startDate, endDate);
-  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDate;
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\n' + translations[currentLanguage].signatureDate + ' ' + textData.signatureDate;
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
@@ -443,10 +588,10 @@ document.getElementById('justify').addEventListener('click', async function() {
   const lineHeight = 14;
   const maxWidth = pageW - left * 2;
 
-  // Draw "Atestado Médico" title at the top
+  // Draw title at the top
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(24);
-  const titleText = "Atestado Médico";
+  const titleText = textData.title;
   const titleWidth = doc.getTextWidth(titleText);
   const titleX = (pageW - titleWidth) / 2;
   doc.text(titleText, titleX, top);
@@ -512,12 +657,18 @@ document.getElementById('justify').addEventListener('click', async function() {
   }
 
   // Signature text with dynamic date
-  const sigLines = [
+  const sigLines = currentLanguage === 'pt' ? [
     'Assinado digitalmente por: IGOR',
     'ANDRÉ GRILO SOTTOMAIOR FARIA',
     `Data: ${textData.signatureDate}`,
     'Especialidade: Medicina Geral e Familiar',
     'Ordem: M-48611'
+  ] : [
+    'Digitally signed by: IGOR',
+    'ANDRÉ GRILO SOTTOMAIOR FARIA',
+    `Date: ${textData.signatureDate}`,
+    'Specialty: General and Family Medicine',
+    'Registration: M-48611'
   ];
   
   const sigLineHeight = 10;
