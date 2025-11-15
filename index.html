@@ -232,18 +232,14 @@ document.getElementById('justify').addEventListener('click', async function() {
     doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
   }
 
-  // signature text: choose normalized coordinates for its center easily if you want;
-  // here we place it slightly below the image center (adjust as needed)
-  const sigTextCenterNormX = imgNormX; // same horizontal normalized center as image
-  const sigTextCenterNormY = imgNormY; // 10 units lower in normalized Y (toward bottom) — adjust if needed
+  // FIXED: Proper left alignment for signature text
+  // Calculate the left position for the signature block to be centered under the image
+  const sigTextLeft = imgXpos; // Start at the same left position as the image
+  
+  // Position signature text below the image with some spacing
+  const sigTextYStart = imgYpos + drawH + 15;
 
-  // convert signature text normalized center to top-left coords for placing first line:
-  const sigTextCenterFromBottom = (sigTextCenterNormY / 100) * pageH;
-  const sigTextCenterY_pt = pageH - sigTextCenterFromBottom;
-  const sigTextX_pt = (sigTextCenterNormX / 100) * pageW;
-  const sigTextY_pt = sigTextCenterY_pt; // center point; we'll offset lines upward a bit
-
-  // render signature lines centered at sigTextX_pt
+  // render signature lines left-aligned
   const sigLines = [
     'Assinado digitalmente por: IGOR', 
     'ANDRÉ GRILO SOTTOMAIOR FARIA',
@@ -251,17 +247,16 @@ document.getElementById('justify').addEventListener('click', async function() {
     'Especialidade: Medicina Geral e Familiar',
     'Ordem: M-48611'
   ];
-  // compute total block height
-  const sigLineHeight = 12 + 4; // font size 12 + small spacing
-  const blockH = sigLines.length * sigLineHeight;
-  // top-left y for block so block is centered at sigTextY_pt
-  let blockTopY = sigTextY_pt - blockH / 2;
-  // left so text is centered around sigTextX_pt
+  
+  const sigLineHeight = 12;
+  const sigFontSize = 10;
+  
+  doc.setFontSize(sigFontSize);
+  
+  // Draw each line left-aligned at the same starting point
   sigLines.forEach((line, i) => {
-    const tw = doc.getTextWidth(line);
-    const drawX = sigTextX_pt - tw / 2;
-    const drawY = blockTopY + i * sigLineHeight + 12; // baseline offset
-    doc.text(line, drawX, drawY);
+    const drawY = sigTextYStart + i * (sigLineHeight + 2);
+    doc.text(line, sigTextLeft, drawY);
   });
 
   const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
