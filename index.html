@@ -123,6 +123,7 @@ function updateTimestamp() {
 
 // Update immediately and then every second
 updateTimestamp();
+setInterval(updateTimestamp, 1000);
 
 // Date type toggle - FIXED VERSION
 function updateDateOptions() {
@@ -301,7 +302,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
   const textData = buildText(name, nif, dateType, singleDate, startDate, endDate);
-  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDat;
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDate; // FIXED: Added missing 'e'
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
@@ -332,7 +333,7 @@ document.getElementById('justify').addEventListener('click', async function() {
 
   // Draw "Atestado Médico" title at the top
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22); // Increased font size
+  doc.setFontSize(22);
   const titleText = "Atestado Médico";
   const titleWidth = doc.getTextWidth(titleText);
   const titleX = (pageW - titleWidth) / 2;
@@ -382,10 +383,16 @@ document.getElementById('justify').addEventListener('click', async function() {
   const imgXpos = imgPos.x;
   const imgYpos = imgPos.y;
 
-  // if text would overlap image, put image on new page
-  if (y + 20 > imgYpos && imgData) {
+  // FIXED: Check if there's enough space for image AND signature on current page
+  // If not, add a new page before drawing anything
+  const signatureHeight = 70; // Approximate height needed for signature block
+  if (y + signatureHeight > pageH - 50 && imgData) {
     doc.addPage();
     y = top;
+    // Recalculate image position for new page
+    const newImgPos = normalizedToPdfCoords(imgNormX, imgNormY, imgWidthPct, imgHeightPct, pageW, pageH, drawW, drawH);
+    imgXpos = newImgPos.x;
+    imgYpos = newImgPos.y;
   }
 
   // draw image
