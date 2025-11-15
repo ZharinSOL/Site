@@ -95,7 +95,7 @@ function buildText(name, nif, start, end) {
   const startTxt = start ? formatDateForText(start) : '$var1';
   const endTxt = end ? formatDateForText(end) : '$var2';
 
-  return `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, de Dinamarca, NIF n° ${nifTxt} se\nencontrou doente e impedido de exercer a sua atividade profissional desde o dia ${startTxt} ao dia\n${endTxt}.`;
+  return `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, NIF n° ${nifTxt} se encontrou \ndoente e impedido de exercer a sua atividade profissional \ndesde o dia ${startTxt} ao dia${endTxt}.`;
 }
 
 function wrapParagraph(doc, par, maxWidth) {
