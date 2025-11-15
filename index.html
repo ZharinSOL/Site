@@ -210,7 +210,7 @@ function buildText(name, nif, dateType, singleDate, startDate, endDate) {
 
   return {
     title: "Atestado Médico",
-    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do passaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional ${dateText}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`,
+    content: `\n\nIgor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que ${nameTxt}, titular do número de identificação fiscal nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional ${dateText}.\n\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`,
     signatureDate: signatureBaseDate ? formatSignatureDate(signatureBaseDate) : '2025-10-20 18:51:42'
   };
 }
