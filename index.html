@@ -212,15 +212,16 @@ document.getElementById('justify').addEventListener('click', async function() {
   const lineHeight = 16;
   const maxWidth = pageW - left * 2;
 
+  // CHANGED: Use Helvetica (sans-serif) instead of Times
   // Draw title "Atestado Médico" centered
-  doc.setFont('Times', 'Bold');
+  doc.setFont('helvetica', 'bold'); // Changed to helvetica bold
   doc.setFontSize(16);
   const titleWidth = doc.getTextWidth(textData.title);
   const titleX = (pageW - titleWidth) / 2;
   doc.text(textData.title, titleX, top);
   
   // Draw content
-  doc.setFont('Times', 'Normal');
+  doc.setFont('helvetica', 'normal'); // Changed to helvetica normal
   doc.setFontSize(12);
   let y = top + 40; // Space after title
 
@@ -287,6 +288,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const sigFontSize = 10;
   
   doc.setFontSize(sigFontSize);
+  doc.setFont('helvetica', 'normal'); // Changed to helvetica for signature too
   
   // Calculate the maximum width of signature lines
   let maxSigLineWidth = 0;
