@@ -19,6 +19,9 @@
     .error-message{color:#d32f2f;font-size:14px;margin-top:8px;display:none}
     .error-field{border-color:#d32f2f !important}
     .language-toggle{position:absolute;top:20px;left:20px;background:#f5f5f5;border:1px solid #ddd;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:14px}
+    .admin-section{display:none}
+    .admin-active .admin-section{display:block}
+    .admin-hint{font-size:12px;color:#666;margin-top:4px;font-style:italic}
   </style>
 </head>
 <body>
@@ -31,6 +34,7 @@
   <label for="name" id="nameLabel">Nome (varN)</label>
   <input id="name" type="text" placeholder="Ex.: João Silva">
   <div id="name-error" class="error-message">Por favor, insira o nome</div>
+  <div class="admin-hint" id="adminHint">Dica: Digite "admin" para aceder às opções avançadas</div>
 
   <label for="nif" id="nifLabel">NIFº</label>
   <input id="nif" type="text" placeholder="Ex.: 123456789" maxlength="9">
@@ -63,41 +67,44 @@
     </div>
   </div>
 
-  <div class="section">
-    <h3 id="imagePositionTitle">Posição da Imagem (Developer Tools)</h3>
-    <div class="row">
-      <div>
-        <label for="imgX" id="imgXLabel">Image X (0 left — 50 center — 100 right)</label>
-        <input id="imgX" type="number" min="0" max="100" value="54" step="0.1">
+  <!-- Admin Sections (Hidden by Default) -->
+  <div class="admin-section">
+    <div class="section">
+      <h3 id="imagePositionTitle">Posição da Imagem (Developer Tools)</h3>
+      <div class="row">
+        <div>
+          <label for="imgX" id="imgXLabel">Image X (0 left — 50 center — 100 right)</label>
+          <input id="imgX" type="number" min="0" max="100" value="54" step="0.1">
+        </div>
+        <div>
+          <label for="imgY" id="imgYLabel">Image Y (0 bottom — 50 center — 100 top)</label>
+          <input id="imgY" type="number" min="0" max="100" value="60" step="0.1">
+        </div>
       </div>
-      <div>
-        <label for="imgY" id="imgYLabel">Image Y (0 bottom — 50 center — 100 top)</label>
-        <input id="imgY" type="number" min="0" max="100" value="60" step="0.1">
+
+      <div class="row">
+        <div>
+          <label for="imgW" id="imgWLabel">Image width (%) of page width (0-100)</label>
+          <input id="imgW" type="number" min="0" max="100" value="33" step="0.1">
+        </div>
+        <div>
+          <label for="imgH" id="imgHLabel">Image height (%) of page height (0-100)</label>
+          <input id="imgH" type="number" min="0" max="100" value="33" step="0.1">
+        </div>
       </div>
     </div>
 
-    <div class="row">
-      <div>
-        <label for="imgW" id="imgWLabel">Image width (%) of page width (0-100)</label>
-        <input id="imgW" type="number" min="0" max="100" value="33" step="0.1">
-      </div>
-      <div>
-        <label for="imgH" id="imgHLabel">Image height (%) of page height (0-100)</label>
-        <input id="imgH" type="number" min="0" max="100" value="33" step="0.1">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h3 id="signaturePositionTitle">Posição do Texto de Assinatura (Developer Tools)</h3>
-    <div class="row">
-      <div>
-        <label for="textX" id="textXLabel">Text X (0 left — 50 center — 100 right)</label>
-        <input id="textX" type="number" min="0" max="100" value="37" step="0.1">
-      </div>
-      <div>
-        <label for="textY" id="textYLabel">Text Y (0 bottom — 50 center — 100 top)</label>
-        <input id="textY" type="number" min="0" max="100" value="62.5" step="0.1">
+    <div class="section">
+      <h3 id="signaturePositionTitle">Posição do Texto de Assinatura (Developer Tools)</h3>
+      <div class="row">
+        <div>
+          <label for="textX" id="textXLabel">Text X (0 left — 50 center — 100 right)</label>
+          <input id="textX" type="number" min="0" max="100" value="37" step="0.1">
+        </div>
+        <div>
+          <label for="textY" id="textYLabel">Text Y (0 bottom — 50 center — 100 top)</label>
+          <input id="textY" type="number" min="0" max="100" value="62.5" step="0.1">
+        </div>
       </div>
     </div>
   </div>
@@ -108,7 +115,7 @@
 
   <!-- Timestamp -->
   <div id="timestamp" class="timestamp">
-    <span id="lastUpdatedText">Last updated:</span> <span id="currentTime"></span>
+    <span id="lastUpdatedText">Atualizado em:</span> <span id="currentTime"></span>
   </div>
 
   <!-- hidden image (same folder) -->
@@ -147,11 +154,7 @@ const translations = {
     endDateError: "Por favor, selecione a data de fim",
     dateRangeError: "A data de início não pode ser posterior à data de fim",
     validationError: "Por favor, preencha todos os campos obrigatórios antes de gerar o PDF.",
-    outputTitle: "Atestado Médico",
-    outputContent: "Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob compromisso profissional que {name}, titular do número de identificação fiscal nº {nif} se encontrou doente e impedido de exercer a sua atividade profissional {dateText}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.",
-    signatureDate: "Data da assinatura:",
-    singleDateText: "no dia {date}",
-    rangeDateText: "desde o dia {startDate} ao dia {endDate}"
+    adminHint: "Dica: Digite 'admin' para aceder às opções avançadas"
   },
   en: {
     pageTitle: "Certificate Generator",
@@ -182,8 +185,7 @@ const translations = {
     endDateError: "Please select the end date",
     dateRangeError: "Start date cannot be after end date",
     validationError: "Please fill in all required fields before generating the PDF.",
-    singleDateText: "on {date}",
-    rangeDateText: "from {startDate} to {endDate}"
+    adminHint: "Tip: Type 'admin' to access advanced options"
   }
 };
 
@@ -247,10 +249,25 @@ function updateLanguage() {
   document.getElementById('date-error').textContent = t.dateError;
   document.getElementById('startDate-error').textContent = t.startDateError;
   document.getElementById('endDate-error').textContent = t.endDateError;
+  
+  // Update admin hint
+  document.getElementById('adminHint').textContent = t.adminHint;
 }
 
 // Initialize language toggle
 document.getElementById('languageToggle').addEventListener('click', toggleLanguage);
+
+// Admin mode detection
+function checkAdminMode() {
+  const nameInput = document.getElementById('name');
+  const adminSections = document.querySelector('.admin-section');
+  
+  if (nameInput.value.toLowerCase() === 'admin') {
+    document.body.classList.add('admin-active');
+  } else {
+    document.body.classList.remove('admin-active');
+  }
+}
 
 // Timestamp function
 function updateTimestamp() {
@@ -318,6 +335,7 @@ function clearError(fieldId) {
 // Add event listeners to clear errors when user starts typing
 document.getElementById('name').addEventListener('input', function() {
   clearError('name');
+  checkAdminMode(); // Check for admin mode on name input
 });
 document.getElementById('nif').addEventListener('input', function() {
   clearError('nif');
@@ -546,16 +564,22 @@ document.getElementById('justify').addEventListener('click', async function() {
   const startDate = document.getElementById('startDate').value;
   const endDate = document.getElementById('endDate').value;
 
-  const imgNormX = parseFloat(document.getElementById('imgX').value); // 0..100
-  const imgNormY = parseFloat(document.getElementById('imgY').value); // 0..100
-  const imgWidthPct = parseFloat(document.getElementById('imgW').value); // % of page width
-  const imgHeightPct = parseFloat(document.getElementById('imgH').value); // % of page height
-
-  const textNormX = parseFloat(document.getElementById('textX').value); // 0..100
-  const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
+  // Use default values if admin mode is not active
+  const imgNormX = document.body.classList.contains('admin-active') ? 
+    parseFloat(document.getElementById('imgX').value) : 54;
+  const imgNormY = document.body.classList.contains('admin-active') ? 
+    parseFloat(document.getElementById('imgY').value) : 60;
+  const imgWidthPct = document.body.classList.contains('admin-active') ? 
+    parseFloat(document.getElementById('imgW').value) : 33;
+  const imgHeightPct = document.body.classList.contains('admin-active') ? 
+    parseFloat(document.getElementById('imgH').value) : 33;
+  const textNormX = document.body.classList.contains('admin-active') ? 
+    parseFloat(document.getElementById('textX').value) : 37;
+  const textNormY = document.body.classList.contains('admin-active') ? 
+    parseFloat(document.getElementById('textY').value) : 62.5;
 
   const textData = buildText(name, nif, dateType, singleDate, startDate, endDate);
-  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\n' + translations[currentLanguage].signatureDate + ' ' + textData.signatureDate;
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nData da assinatura: ' + textData.signatureDate;
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
@@ -584,10 +608,10 @@ document.getElementById('justify').addEventListener('click', async function() {
   const lineHeight = 14;
   const maxWidth = pageW - left * 2;
 
-  // Draw title at the top
+  // Draw "Atestado Médico" title at the top
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(24);
-  const titleText = textData.title;
+  const titleText = "Atestado Médico";
   const titleWidth = doc.getTextWidth(titleText);
   const titleX = (pageW - titleWidth) / 2;
   doc.text(titleText, titleX, top);
@@ -653,13 +677,13 @@ document.getElementById('justify').addEventListener('click', async function() {
   }
 
   // Signature text with dynamic date (always in Portuguese)
-const sigLines = [
-  'Assinado digitalmente por: IGOR',
-  'ANDRÉ GRILO SOTTOMAIOR FARIA',
-  `Data: ${textData.signatureDate}`,
-  'Especialidade: Medicina Geral e Familiar',
-  'Ordem: M-48611'
-];
+  const sigLines = [
+    'Assinado digitalmente por: IGOR',
+    'ANDRÉ GRILO SOTTOMAIOR FARIA',
+    `Data: ${textData.signatureDate}`,
+    'Especialidade: Medicina Geral e Familiar',
+    'Ordem: M-48611'
+  ];
   
   const sigLineHeight = 10;
   const sigFontSize = 8.5;
