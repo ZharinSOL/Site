@@ -232,14 +232,7 @@ document.getElementById('justify').addEventListener('click', async function() {
     doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
   }
 
-  // FIXED: Proper left alignment for signature text
-  // Calculate the left position for the signature block to be centered under the image
-  const sigTextLeft = imgXpos; // Start at the same left position as the image
-  
-  // Position signature text below the image with some spacing
-  const sigTextYStart = imgYpos; //+ drawH + 15;
-
-  // render signature lines left-aligned
+  // FIXED: Proper left alignment while keeping the block centered
   const sigLines = [
     'Assinado digitalmente por: IGOR', 
     'ANDRÉ GRILO SOTTOMAIOR FARIA',
@@ -253,10 +246,21 @@ document.getElementById('justify').addEventListener('click', async function() {
   
   doc.setFontSize(sigFontSize);
   
-  // Draw each line left-aligned at the same starting point
+  // Calculate the maximum width of signature lines to center the block
+  let maxSigLineWidth = 0;
+  sigLines.forEach(line => {
+    const width = doc.getTextWidth(line);
+    if (width > maxSigLineWidth) maxSigLineWidth = width;
+  });
+  
+  // Center the entire signature block under the image
+  const sigBlockLeft = imgXpos + (drawW - maxSigLineWidth) / 2;
+  const sigTextYStart = imgYpos + drawH + 15;
+
+  // Draw each line left-aligned within the centered block
   sigLines.forEach((line, i) => {
     const drawY = sigTextYStart + i * (sigLineHeight + 2);
-    doc.text(line, sigTextLeft, drawY);
+    doc.text(line, sigBlockLeft, drawY);
   });
 
   const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
