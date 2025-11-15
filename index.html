@@ -16,6 +16,8 @@
     .timestamp{font-size:12px;color:#666;margin-top:8px;font-style:italic;text-align:center}
     .date-option{display:none}
     .date-option.active{display:block}
+    .error-message{color:#d32f2f;font-size:14px;margin-top:8px;display:none}
+    .error-field{border-color:#d32f2f !important}
   </style>
 </head>
 <body>
@@ -24,9 +26,11 @@
 
   <label for="name">Nome (varN)</label>
   <input id="name" type="text" placeholder="Ex.: João Silva">
+  <div id="name-error" class="error-message">Por favor, insira o nome</div>
 
   <label for="nif">NIFº</label>
-  <input id="nif" type="text" placeholder="Ex.: 123456789">
+  <input id="nif" type="text" placeholder="Ex.: 123456789" maxlength="9">
+  <div id="nif-error" class="error-message">Por favor, insira um NIF válido (9 dígitos)</div>
 
   <label for="dateType">Tipo de Data</label>
   <select id="dateType">
@@ -37,6 +41,7 @@
   <div id="singleDateOption" class="date-option active">
     <label for="date">Data da consulta</label>
     <input id="date" type="date">
+    <div id="date-error" class="error-message">Por favor, selecione uma data</div>
   </div>
 
   <div id="rangeDateOption" class="date-option">
@@ -44,10 +49,12 @@
       <div>
         <label for="startDate">Data início</label>
         <input id="startDate" type="date">
+        <div id="startDate-error" class="error-message">Por favor, selecione a data de início</div>
       </div>
       <div>
         <label for="endDate">Data fim</label>
         <input id="endDate" type="date">
+        <div id="endDate-error" class="error-message">Por favor, selecione a data de fim</div>
       </div>
     </div>
   </div>
@@ -143,6 +150,105 @@ function updateDateOptions() {
 // Initialize and add event listener
 document.getElementById('dateType').addEventListener('change', updateDateOptions);
 updateDateOptions(); // Set initial state
+
+// NIF input validation - only allow numbers and limit to 9 digits
+document.getElementById('nif').addEventListener('input', function(e) {
+  // Remove any non-digit characters
+  let value = e.target.value.replace(/\D/g, '');
+  
+  // Limit to 9 digits
+  if (value.length > 9) {
+    value = value.substring(0, 9);
+  }
+  
+  e.target.value = value;
+});
+
+// Clear error styling when user starts typing in a field
+function clearError(fieldId) {
+  const field = document.getElementById(fieldId);
+  const error = document.getElementById(fieldId + '-error');
+  
+  if (field && error) {
+    field.classList.remove('error-field');
+    error.style.display = 'none';
+  }
+}
+
+// Add event listeners to clear errors when user starts typing
+document.getElementById('name').addEventListener('input', function() {
+  clearError('name');
+});
+document.getElementById('nif').addEventListener('input', function() {
+  clearError('nif');
+});
+document.getElementById('date').addEventListener('change', function() {
+  clearError('date');
+});
+document.getElementById('startDate').addEventListener('change', function() {
+  clearError('startDate');
+});
+document.getElementById('endDate').addEventListener('change', function() {
+  clearError('endDate');
+});
+
+// Validation function
+function validateForm() {
+  let isValid = true;
+  
+  // Validate name
+  const name = document.getElementById('name').value.trim();
+  if (!name) {
+    document.getElementById('name').classList.add('error-field');
+    document.getElementById('name-error').style.display = 'block';
+    isValid = false;
+  }
+  
+  // Validate NIF (exactly 9 digits)
+  const nif = document.getElementById('nif').value.trim();
+  if (!nif || nif.length !== 9) {
+    document.getElementById('nif').classList.add('error-field');
+    document.getElementById('nif-error').style.display = 'block';
+    isValid = false;
+  }
+  
+  // Validate dates based on selected type
+  const dateType = document.getElementById('dateType').value;
+  if (dateType === 'single') {
+    const date = document.getElementById('date').value;
+    if (!date) {
+      document.getElementById('date').classList.add('error-field');
+      document.getElementById('date-error').style.display = 'block';
+      isValid = false;
+    }
+  } else {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate) {
+      document.getElementById('startDate').classList.add('error-field');
+      document.getElementById('startDate-error').style.display = 'block';
+      isValid = false;
+    }
+    
+    if (!endDate) {
+      document.getElementById('endDate').classList.add('error-field');
+      document.getElementById('endDate-error').style.display = 'block';
+      isValid = false;
+    }
+    
+    // Additional validation: end date should not be before start date
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      document.getElementById('startDate').classList.add('error-field');
+      document.getElementById('endDate').classList.add('error-field');
+      document.getElementById('startDate-error').textContent = 'A data de início não pode ser posterior à data de fim';
+      document.getElementById('startDate-error').style.display = 'block';
+      isValid = false;
+    }
+  }
+  
+  return isValid;
+}
 
 const { jsPDF } = window.jspdf;
 
@@ -286,6 +392,12 @@ function normalizedToPdfTextCoords(normX, normY, pageW, pageH) {
 }
 
 document.getElementById('justify').addEventListener('click', async function() {
+  // Validate form before proceeding
+  if (!validateForm()) {
+    document.getElementById('output').textContent = "Por favor, preencha todos os campos obrigatórios antes de gerar o PDF.";
+    return;
+  }
+
   const name = (document.getElementById('name').value || '').trim();
   const nif = (document.getElementById('nif').value || '').trim();
   const dateType = document.getElementById('dateType').value;
@@ -302,7 +414,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
   const textData = buildText(name, nif, dateType, singleDate, startDate, endDate);
-  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDate; // FIXED: Added missing 'e'
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDate;
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
@@ -380,8 +492,8 @@ document.getElementById('justify').addEventListener('click', async function() {
 
   // map normalized center -> top-left pdf coords for image
   const imgPos = normalizedToPdfCoords(imgNormX, imgNormY, imgWidthPct, imgHeightPct, pageW, pageH, drawW, drawH);
-  const imgXpos = imgPos.x;
-  const imgYpos = imgPos.y;
+  let imgXpos = imgPos.x;
+  let imgYpos = imgPos.y;
 
   
   const signatureHeight = 70; // Approximate height needed for signature block
