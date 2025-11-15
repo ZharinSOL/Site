@@ -22,21 +22,18 @@
   <label for="name">Nome (varN)</label>
   <input id="name" type="text" placeholder="Ex.: João Silva">
 
-  <label for="nif">NIF</label>
+  <label for="nif">NIF / Passaporte</label>
   <input id="nif" type="text" placeholder="Ex.: 123456789">
 
-  <label for="start">Data início (var1)</label>
-  <input id="start" type="date">
-
-  <label for="end">Data fim (var2)</label>
-  <input id="end" type="date">
+  <label for="date">Data da consulta</label>
+  <input id="date" type="date">
 
   <div class="section">
     <h3>Posição da Imagem</h3>
     <div class="row">
       <div>
         <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
-        <input id="imgX" type="number" min="0" max="100" value="55" step="0.1">
+        <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
       </div>
       <div>
         <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
@@ -61,11 +58,11 @@
     <div class="row">
       <div>
         <label for="textX">Text X (0 left — 50 center — 100 right)</label>
-        <input id="textX" type="number" min="0" max="100" value="35" step="0.1">
+        <input id="textX" type="number" min="0" max="100" value="50" step="0.1">
       </div>
       <div>
         <label for="textY">Text Y (0 bottom — 50 center — 100 top)</label>
-        <input id="textY" type="number" min="0" max="100" value="58" step="0.1">
+        <input id="textY" type="number" min="0" max="100" value="40" step="0.1">
       </div>
     </div>
   </div>
@@ -85,17 +82,21 @@ function formatDateForText(inputDate) {
   if (!inputDate) return '';
   const d = new Date(inputDate + 'T00:00:00');
   if (isNaN(d)) return inputDate;
-  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  return d.getDate() + ' de ' + months[d.getMonth()] + ' de ' + d.getFullYear();
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
-function buildText(name, nif, start, end) {
+function buildText(name, nif, date) {
   const nameTxt = name || '$varN';
   const nifTxt = nif || '$NIF';
-  const startTxt = start ? formatDateForText(start) : '$var1';
-  const endTxt = end ? formatDateForText(end) : '$var2';
+  const dateTxt = date ? formatDateForText(date) : '$data';
 
-  return `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, NIF n° ${nifTxt} se encontrou \ndoente e impedido de exercer a sua atividade profissional \ndesde o dia ${startTxt} ao dia${endTxt}.`;
+  return {
+    title: "Atestado Médico",
+    content: `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, de nacionalidade dinamarquesa, portador do\npassaporte nº ${nifTxt} se encontrou doente e impedido de exercer a sua atividade profissional no dia\n${dateTxt}.\n\nPor ser verdade e me ter sido solicitado passo este atestado que dato e assino.`
+  };
 }
 
 function wrapParagraph(doc, par, maxWidth) {
@@ -171,8 +172,7 @@ function normalizedToPdfTextCoords(normX, normY, pageW, pageH) {
 document.getElementById('justify').addEventListener('click', async function() {
   const name = (document.getElementById('name').value || '').trim();
   const nif = (document.getElementById('nif').value || '').trim();
-  const start = document.getElementById('start').value;
-  const end = document.getElementById('end').value;
+  const date = document.getElementById('date').value;
 
   const imgNormX = parseFloat(document.getElementById('imgX').value); // 0..100
   const imgNormY = parseFloat(document.getElementById('imgY').value); // 0..100
@@ -182,8 +182,8 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormX = parseFloat(document.getElementById('textX').value); // 0..100
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
-  const text = buildText(name, nif, start, end);
-  document.getElementById('output').textContent = text;
+  const textData = buildText(name, nif, date);
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content;
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
@@ -212,12 +212,20 @@ document.getElementById('justify').addEventListener('click', async function() {
   const lineHeight = 16;
   const maxWidth = pageW - left * 2;
 
+  // Draw title "Atestado Médico" centered
+  doc.setFont('Times', 'Bold');
+  doc.setFontSize(16);
+  const titleWidth = doc.getTextWidth(textData.title);
+  const titleX = (pageW - titleWidth) / 2;
+  doc.text(textData.title, titleX, top);
+  
+  // Draw content
   doc.setFont('Times', 'Normal');
   doc.setFontSize(12);
-  let y = top;
+  let y = top + 40; // Space after title
 
   // render text with wrapping
-  const paragraphs = text.split('\n');
+  const paragraphs = textData.content.split('\n');
   paragraphs.forEach(par => {
     const lines = wrapParagraph(doc, par, maxWidth);
     if (lines.length === 0) { y += lineHeight; return; }
@@ -266,11 +274,11 @@ document.getElementById('justify').addEventListener('click', async function() {
     doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
   }
 
-  // FIXED: Use the new text position controls
+  // Signature text
   const sigLines = [
-    'Assinado digitalmente por: IGOR', 
+    'Assinado digitalmente por: IGOR',
     'ANDRÉ GRILO SOTTOMAIOR FARIA',
-    'Data: 2025-10-05 10:04:56',
+    'Data: 2025-10-20 18:51:42',
     'Especialidade: Medicina Geral e Familiar',
     'Ordem: M-48611'
   ];
@@ -291,7 +299,6 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textPos = normalizedToPdfTextCoords(textNormX, textNormY, pageW, pageH);
   
   // For left-aligned text that's centered, we need to adjust the X position
-  // If user wants center (50), we center the block. If left (0), we start at left, etc.
   let textXPos;
   if (textNormX <= 50) {
     // For left-aligned positioning (0-50), use the calculated X directly
@@ -307,7 +314,7 @@ document.getElementById('justify').addEventListener('click', async function() {
     doc.text(line, textXPos, drawY);
   });
 
-  const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
+  const fileName = ( (name || 'atestado').trim().replace(/\s+/g, '_') ) + '.pdf';
   doc.save(fileName);
 });
 </script>
