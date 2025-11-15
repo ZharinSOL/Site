@@ -301,7 +301,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
   const textData = buildText(name, nif, dateType, singleDate, startDate, endDate);
-  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + $data+1;
+  document.getElementById('output').textContent = textData.title + '\n\n' + textData.content + '\n\nSignature Date: ' + textData.signatureDat;
 
   // load image dataURL
   const imgEl = document.getElementById('sigImg');
