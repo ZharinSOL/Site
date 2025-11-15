@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerador de Justificação</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;padding:20px;max-width:800px;margin:auto}
+    label{display:block;margin-top:12px;font-weight:600}
+    input, select{width:100%;padding:8px;margin-top:6px;box-sizing:border-box}
+    button{margin-top:14px;padding:10px 16px;font-size:13px}
+    #output{white-space:pre-wrap;border:1px solid #ddd;padding:12px;margin-top:18px;background:#fafafa}
+    .row{display:flex;gap:10px}
+    .row > div{flex:1}
+  </style>
+</head>
+<body>
+
+  <h1>Gerador de Justificação</h1>
+
+  <label for="name">Nome (varN)</label>
+  <input id="name" type="text" placeholder="Ex.: João Silva">
+
+  <label for="nif">NIF</label>
+  <input id="nif" type="text" placeholder="Ex.: 123456789">
+
+  <label for="start">Data início (var1)</label>
+  <input id="start" type="date">
+
+  <label for="end">Data fim (var2)</label>
+  <input id="end" type="date">
+
+  <div class="row">
+    <div>
+      <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
+      <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
+    </div>
+    <div>
+      <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
+      <input id="imgY" type="number" min="0" max="100" value="55" step="0.1">
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="imgW">Image width (%) of page width (0-100)</label>
+      <input id="imgW" type="number" min="0" max="100" value="42" step="0.1">
+    </div>
+    <div>
+      <label for="imgH">Image height (%) of page height (0-100)</label>
+      <input id="imgH" type="number" min="0" max="100" value="42" step="0.1">
+    </div>
+  </div>
+
+  <button id="justify">Justificar (Gerar PDF)</button>
+
+  <div id="output" aria-live="polite"></div>
+
+  <!-- hidden image (same folder) -->
+  <img id="sigImg" src="assinadoDigitalmente.jpg" style="display:none" crossorigin="anonymous" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const { jsPDF } = window.jspdf;
+
+function formatDateForText(inputDate) {
+  if (!inputDate) return '';
+  const d = new Date(inputDate + 'T00:00:00');
+  if (isNaN(d)) return inputDate;
+  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  return d.getDate() + ' de ' + months[d.getMonth()] + ' de ' + d.getFullYear();
+}
+
+function buildText(name, nif, start, end) {
+  const nameTxt = name || '$varN';
+  const nifTxt = nif || '$NIF';
+  const startTxt = start ? formatDateForText(start) : '$var1';
+  const endTxt = end ? formatDateForText(end) : '$var2';
+
+  return `Igor André Sottomaior Faria, Médico Inscrito na Ordem dos Médicos com o número 48611, atesta sob\ncompromisso profissional que ${nameTxt}, de Dinamarca, NIF n° ${nifTxt} se\nencontrou doente e impedido de exercer a sua atividade profissional desde o dia ${startTxt} ao dia\n${endTxt}.`;
+}
+
+function wrapParagraph(doc, par, maxWidth) {
+  const words = par.split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (let w of words) {
+    const trial = cur ? cur + ' ' + w : w;
+    if (doc.getTextWidth(trial) > maxWidth) {
+      if (cur) lines.push(cur);
+      cur = w;
+    } else {
+      cur = trial;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function imgElementToDataURL(imgEl) {
+  return new Promise((resolve, reject) => {
+    const img = imgEl;
+    function convert() {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        resolve(c.toDataURL('image/jpeg'));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    if (img.complete && img.naturalWidth !== 0) {
+      convert();
+    } else {
+      img.onload = convert;
+      img.onerror = () => reject(new Error('Image load error'));
+    }
+  });
+}
+
+// Map normalized coordinates to PDF points
+// normX: 0..100 (0=left,50=center,100=right)
+// normY: 0..100 (0=bottom,50=center,100=top)
+// widthPercent/heightPercent: percent of page width/height for image size
+function normalizedToPdfCoords(normX, normY, widthPct, heightPct, pageW, pageH, drawW, drawH) {
+  // compute image center in points
+  const centerX_pt = (normX / 100) * pageW;
+  // Y: normalized 0 bottom -> convert to points with origin at top for jsPDF
+  const centerY_pt_from_bottom = (normY / 100) * pageH;
+  const centerY_pt = pageH - centerY_pt_from_bottom; // jsPDF origin is top-left
+
+  // compute top-left (x,y) for drawing image given its width/height
+  const x = centerX_pt - drawW / 2;
+  const y = centerY_pt - drawH / 2;
+  return { x, y };
+}
+
+document.getElementById('justify').addEventListener('click', async function() {
+  const name = (document.getElementById('name').value || '').trim();
+  const nif = (document.getElementById('nif').value || '').trim();
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('end').value;
+
+  const imgNormX = parseFloat(document.getElementById('imgX').value); // 0..100
+  const imgNormY = parseFloat(document.getElementById('imgY').value); // 0..100
+  const imgWidthPct = parseFloat(document.getElementById('imgW').value); // % of page width
+  const imgHeightPct = parseFloat(document.getElementById('imgH').value); // % of page height
+
+  const text = buildText(name, nif, start, end);
+  document.getElementById('output').textContent = text;
+
+  // load image dataURL
+  const imgEl = document.getElementById('sigImg');
+  let imgData = null;
+  try {
+    imgData = await imgElementToDataURL(imgEl);
+  } catch (e) {
+    try {
+      const resp = await fetch(imgEl.src);
+      const blob = await resp.blob();
+      imgData = await new Promise((res) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.readAsDataURL(blob);
+      });
+    } catch (e2) {
+      imgData = null;
+    }
+  }
+
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const left = 50;
+  const top = 70;
+  const lineHeight = 16;
+  const maxWidth = pageW - left * 2;
+
+  doc.setFont('Times', 'Normal');
+  doc.setFontSize(12);
+  let y = top;
+
+  // render text with wrapping
+  const paragraphs = text.split('\n');
+  paragraphs.forEach(par => {
+    const lines = wrapParagraph(doc, par, maxWidth);
+    if (lines.length === 0) { y += lineHeight; return; }
+    lines.forEach(line => {
+      if (y > pageH - 120) {
+        doc.addPage();
+        y = top;
+      }
+      doc.text(line, left, y);
+      y += lineHeight;
+    });
+    y += lineHeight / 2;
+  });
+
+  // compute draw width/height from percentages requested
+  const desiredDrawW = (imgWidthPct / 100) * pageW;
+  const desiredDrawH = (imgHeightPct / 100) * pageH;
+
+  let drawW = desiredDrawW;
+  let drawH = desiredDrawH;
+
+  if (imgData) {
+    const tmp = new Image();
+    tmp.src = imgData;
+    await new Promise(r => tmp.onload = r);
+    const iw = tmp.naturalWidth, ih = tmp.naturalHeight;
+    // scale to fit desired box while preserving aspect ratio
+    const scale = Math.min(desiredDrawW / iw, desiredDrawH / ih, 1);
+    drawW = iw * scale;
+    drawH = ih * scale;
+  }
+
+  // map normalized center -> top-left pdf coords
+  const pos = normalizedToPdfCoords(imgNormX, imgNormY, imgWidthPct, imgHeightPct, pageW, pageH, drawW, drawH);
+  const imgXpos = pos.x;
+  const imgYpos = pos.y;
+
+  // if text would overlap image, put image on new page
+  if (y + 20 > imgYpos && imgData) {
+    doc.addPage();
+    y = top;
+  }
+
+  // draw image and signature text (signature text placed below image by default)
+  if (imgData) {
+    doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
+  }
+
+  // NEW: Calculate the left alignment position for signature text
+  // Use the same left margin as the main text for consistency
+  const sigTextLeft = left;
+  
+  // Position signature text below the image with some spacing
+  const sigTextYStart = imgYpos + drawH + 20;
+
+  // render signature lines left-aligned
+  const sigLines = [
+    'Assinado digitalmente por: IGOR', 
+    'ANDRÉ GRILO SOTTOMAIOR FARIA',
+    'Data: 2025-10-05 10:04:56',
+    'Especialidade: Medicina Geral e Familiar',
+    'Ordem: M-48611'
+  ];
+  
+  const sigLineHeight = 12 + 4; // font size 12 + small spacing
+  
+  // Draw each line left-aligned at the same starting point
+  sigLines.forEach((line, i) => {
+    const drawY = sigTextYStart + i * sigLineHeight;
+    doc.text(line, sigTextLeft, drawY);
+  });
+
+  const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
+  doc.save(fileName);
+});
+</script>
+
+</body>
+</html>
