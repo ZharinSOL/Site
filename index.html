@@ -57,22 +57,22 @@
     <div class="row">
       <div>
         <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
-        <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
+        <input id="imgX" type="number" min="0" max="100" value="54" step="0.1">
       </div>
       <div>
         <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
-        <input id="imgY" type="number" min="0" max="100" value="55" step="0.1">
+        <input id="imgY" type="number" min="0" max="100" value="57" step="0.1">
       </div>
     </div>
 
     <div class="row">
       <div>
         <label for="imgW">Image width (%) of page width (0-100)</label>
-        <input id="imgW" type="number" min="0" max="100" value="42" step="0.1">
+        <input id="imgW" type="number" min="0" max="100" value="33" step="0.1">
       </div>
       <div>
         <label for="imgH">Image height (%) of page height (0-100)</label>
-        <input id="imgH" type="number" min="0" max="100" value="42" step="0.1">
+        <input id="imgH" type="number" min="0" max="100" value="33" step="0.1">
       </div>
     </div>
   </div>
@@ -82,11 +82,11 @@
     <div class="row">
       <div>
         <label for="textX">Text X (0 left — 50 center — 100 right)</label>
-        <input id="textX" type="number" min="0" max="100" value="50" step="0.1">
+        <input id="textX" type="number" min="0" max="100" value="37" step="0.1">
       </div>
       <div>
         <label for="textY">Text Y (0 bottom — 50 center — 100 top)</label>
-        <input id="textY" type="number" min="0" max="100" value="40" step="0.1">
+        <input id="textY" type="number" min="0" max="100" value="59.5" step="0.1">
       </div>
     </div>
   </div>
@@ -125,12 +125,24 @@ function updateTimestamp() {
 updateTimestamp();
 setInterval(updateTimestamp, 1000);
 
-// Date type toggle
-document.getElementById('dateType').addEventListener('change', function() {
-  const dateType = this.value;
-  document.getElementById('singleDateOption').classList.toggle('active', dateType === 'single');
-  document.getElementById('rangeDateOption').classList.toggle('active', dateType === 'range');
-});
+// Date type toggle - FIXED VERSION
+function updateDateOptions() {
+  const dateType = document.getElementById('dateType').value;
+  const singleDateOption = document.getElementById('singleDateOption');
+  const rangeDateOption = document.getElementById('rangeDateOption');
+  
+  if (dateType === 'single') {
+    singleDateOption.style.display = 'block';
+    rangeDateOption.style.display = 'none';
+  } else {
+    singleDateOption.style.display = 'none';
+    rangeDateOption.style.display = 'block';
+  }
+}
+
+// Initialize and add event listener
+document.getElementById('dateType').addEventListener('change', updateDateOptions);
+updateDateOptions(); // Set initial state
 
 const { jsPDF } = window.jspdf;
 
@@ -316,7 +328,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   const pageH = doc.internal.pageSize.getHeight();
   const left = 50;
   const top = 70;
-  const lineHeight = 12;
+  const lineHeight = 24;
   const maxWidth = pageW - left * 2;
 
   // Draw "Atestado Médico" title at the top
@@ -329,7 +341,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   
   // Draw content below the title
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   let y = top + 40;
 
   // render text with wrapping
@@ -391,8 +403,8 @@ document.getElementById('justify').addEventListener('click', async function() {
     'Ordem: M-48611'
   ];
   
-  const sigLineHeight = 12;
-  const sigFontSize = 10;
+  const sigLineHeight = 10;
+  const sigFontSize = 8.5;
   
   doc.setFontSize(sigFontSize);
   doc.setFont('helvetica', 'normal');
