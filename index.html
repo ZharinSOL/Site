@@ -250,7 +250,7 @@ document.getElementById('justify').addEventListener('click', async function() {
 
   // Draw "Atestado Médico" title at the top
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
+  doc.setFontSize(20);
   const titleText = "Atestado Médico";
   const titleWidth = doc.getTextWidth(titleText);
   const titleX = (pageW - titleWidth) / 2;
@@ -258,7 +258,7 @@ document.getElementById('justify').addEventListener('click', async function() {
   
   // Draw content below the title
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
+  doc.setFontSize(9);
   let y = top + 40;
 
   // render text with wrapping
