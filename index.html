@@ -328,12 +328,12 @@ document.getElementById('justify').addEventListener('click', async function() {
   const pageH = doc.internal.pageSize.getHeight();
   const left = 50;
   const top = 70;
-  const lineHeight = 20;
+  const lineHeight = 14;
   const maxWidth = pageW - left * 2;
 
   // Draw "Atestado Médico" title at the top
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(24);
   const titleText = "Atestado Médico";
   const titleWidth = doc.getTextWidth(titleText);
   const titleX = (pageW - titleWidth) / 2;
