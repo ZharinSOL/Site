@@ -12,6 +12,7 @@
     #output{white-space:pre-wrap;border:1px solid #ddd;padding:12px;margin-top:18px;background:#fafafa}
     .row{display:flex;gap:10px}
     .row > div{flex:1}
+    .section{margin-top:30px;padding-top:20px;border-top:1px solid #eee}
   </style>
 </head>
 <body>
@@ -30,25 +31,42 @@
   <label for="end">Data fim (var2)</label>
   <input id="end" type="date">
 
-  <div class="row">
-    <div>
-      <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
-      <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
+  <div class="section">
+    <h3>Posição da Imagem</h3>
+    <div class="row">
+      <div>
+        <label for="imgX">Image X (0 left — 50 center — 100 right)</label>
+        <input id="imgX" type="number" min="0" max="100" value="50" step="0.1">
+      </div>
+      <div>
+        <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
+        <input id="imgY" type="number" min="0" max="100" value="55" step="0.1">
+      </div>
     </div>
-    <div>
-      <label for="imgY">Image Y (0 bottom — 50 center — 100 top)</label>
-      <input id="imgY" type="number" min="0" max="100" value="55" step="0.1">
+
+    <div class="row">
+      <div>
+        <label for="imgW">Image width (%) of page width (0-100)</label>
+        <input id="imgW" type="number" min="0" max="100" value="42" step="0.1">
+      </div>
+      <div>
+        <label for="imgH">Image height (%) of page height (0-100)</label>
+        <input id="imgH" type="number" min="0" max="100" value="42" step="0.1">
+      </div>
     </div>
   </div>
 
-  <div class="row">
-    <div>
-      <label for="imgW">Image width (%) of page width (0-100)</label>
-      <input id="imgW" type="number" min="0" max="100" value="42" step="0.1">
-    </div>
-    <div>
-      <label for="imgH">Image height (%) of page height (0-100)</label>
-      <input id="imgH" type="number" min="0" max="100" value="42" step="0.1">
+  <div class="section">
+    <h3>Posição do Texto de Assinatura</h3>
+    <div class="row">
+      <div>
+        <label for="textX">Text X (0 left — 50 center — 100 right)</label>
+        <input id="textX" type="number" min="0" max="100" value="50" step="0.1">
+      </div>
+      <div>
+        <label for="textY">Text Y (0 bottom — 50 center — 100 top)</label>
+        <input id="textY" type="number" min="0" max="100" value="40" step="0.1">
+      </div>
     </div>
   </div>
 
@@ -137,6 +155,19 @@ function normalizedToPdfCoords(normX, normY, widthPct, heightPct, pageW, pageH, 
   return { x, y };
 }
 
+// Function to convert normalized coordinates to PDF points for text
+function normalizedToPdfTextCoords(normX, normY, pageW, pageH) {
+  // X coordinate: 0=left, 50=center, 100=right
+  const x_pt = (normX / 100) * pageW;
+  
+  // Y coordinate: 0=bottom, 50=center, 100=top
+  // Convert from bottom-based to top-based coordinate system
+  const y_pt_from_bottom = (normY / 100) * pageH;
+  const y_pt = pageH - y_pt_from_bottom;
+  
+  return { x: x_pt, y: y_pt };
+}
+
 document.getElementById('justify').addEventListener('click', async function() {
   const name = (document.getElementById('name').value || '').trim();
   const nif = (document.getElementById('nif').value || '').trim();
@@ -147,6 +178,9 @@ document.getElementById('justify').addEventListener('click', async function() {
   const imgNormY = parseFloat(document.getElementById('imgY').value); // 0..100
   const imgWidthPct = parseFloat(document.getElementById('imgW').value); // % of page width
   const imgHeightPct = parseFloat(document.getElementById('imgH').value); // % of page height
+
+  const textNormX = parseFloat(document.getElementById('textX').value); // 0..100
+  const textNormY = parseFloat(document.getElementById('textY').value); // 0..100
 
   const text = buildText(name, nif, start, end);
   document.getElementById('output').textContent = text;
@@ -216,10 +250,10 @@ document.getElementById('justify').addEventListener('click', async function() {
     drawH = ih * scale;
   }
 
-  // map normalized center -> top-left pdf coords
-  const pos = normalizedToPdfCoords(imgNormX, imgNormY, imgWidthPct, imgHeightPct, pageW, pageH, drawW, drawH);
-  const imgXpos = pos.x;
-  const imgYpos = pos.y;
+  // map normalized center -> top-left pdf coords for image
+  const imgPos = normalizedToPdfCoords(imgNormX, imgNormY, imgWidthPct, imgHeightPct, pageW, pageH, drawW, drawH);
+  const imgXpos = imgPos.x;
+  const imgYpos = imgPos.y;
 
   // if text would overlap image, put image on new page
   if (y + 20 > imgYpos && imgData) {
@@ -227,12 +261,12 @@ document.getElementById('justify').addEventListener('click', async function() {
     y = top;
   }
 
-  // draw image and signature text (signature text placed below image by default)
+  // draw image
   if (imgData) {
     doc.addImage(imgData, 'JPEG', imgXpos, imgYpos, drawW, drawH);
   }
 
-  // FIXED: Proper left alignment while keeping the block centered
+  // FIXED: Use the new text position controls
   const sigLines = [
     'Assinado digitalmente por: IGOR', 
     'ANDRÉ GRILO SOTTOMAIOR FARIA',
@@ -246,21 +280,31 @@ document.getElementById('justify').addEventListener('click', async function() {
   
   doc.setFontSize(sigFontSize);
   
-  // Calculate the maximum width of signature lines to center the block
+  // Calculate the maximum width of signature lines
   let maxSigLineWidth = 0;
   sigLines.forEach(line => {
     const width = doc.getTextWidth(line);
     if (width > maxSigLineWidth) maxSigLineWidth = width;
   });
   
-  // Center the entire signature block under the image
-  const sigBlockLeft = imgXpos + (drawW - maxSigLineWidth) / 2;
-  const sigTextYStart = imgYpos + drawH + 15;
-
-  // Draw each line left-aligned within the centered block
+  // Get text position from user controls
+  const textPos = normalizedToPdfTextCoords(textNormX, textNormY, pageW, pageH);
+  
+  // For left-aligned text that's centered, we need to adjust the X position
+  // If user wants center (50), we center the block. If left (0), we start at left, etc.
+  let textXPos;
+  if (textNormX <= 50) {
+    // For left-aligned positioning (0-50), use the calculated X directly
+    textXPos = textPos.x;
+  } else {
+    // For right of center, adjust for the block width
+    textXPos = textPos.x - maxSigLineWidth;
+  }
+  
+  // Draw each line left-aligned at the calculated position
   sigLines.forEach((line, i) => {
-    const drawY = sigTextYStart + i * (sigLineHeight + 2);
-    doc.text(line, sigBlockLeft, drawY);
+    const drawY = textPos.y + i * (sigLineHeight + 2);
+    doc.text(line, textXPos, drawY);
   });
 
   const fileName = ( (name || 'justificacao').trim().replace(/\s+/g, '_') ) + '.pdf';
